@@ -235,8 +235,8 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
 
   // Subsidy
   if (hasKeyword(['租補', '補助', '可申請租補', '租屋補助'])) {
-    score += 10;
-    breakdown.push({ name: '租屋補助', value: '可申請', score: 10, type: 'positive' });
+    score += 20;
+    breakdown.push({ name: '租屋補助', value: '可申請', score: 20, type: 'positive' });
   }
 
   // Electric Meter & Pricing
