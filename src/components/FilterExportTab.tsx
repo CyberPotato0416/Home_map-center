@@ -89,7 +89,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                 price = parseInt(val.replace(/[^0-9]/g, ''), 10);
               } else if (['title', 'name', '名稱', '標題', '租屋'].some(kw => lowerK.includes(kw))) {
                 title = val;
-              } else if (['link', 'url', '網址', '連結'].some(kw => lowerK.includes(kw)) && !['image', 'photo', 'img'].some(kw => lowerK.includes(kw))) {
+              } else if (['link', 'url', '網址', '連結'].some(kw => lowerK.includes(kw))) {
                 link = val;
               } else if (['image', 'photo', '照片', '圖片'].some(kw => lowerK.includes(kw))) {
                 if (val) {
@@ -349,7 +349,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
               <span className="text-emerald-400">{maxDistance} km</span>
             </label>
             <input 
-              type="range" min="5" max="25" step="0.5" 
+              type="range" min="1" max="20" step="0.5" 
               value={maxDistance} onChange={(e) => setMaxDistance(parseFloat(e.target.value))}
               className="w-full accent-emerald-400 opacity-80 hover:opacity-100 transition-opacity cursor-pointer h-1.5 bg-gray-800 rounded-full appearance-none"
             />

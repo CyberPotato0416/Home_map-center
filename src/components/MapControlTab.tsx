@@ -61,8 +61,8 @@ export const MapControlTab: React.FC<MapControlTabProps> = ({
           </div>
           <input 
             type="range" 
-            min="5" 
-            max="25" 
+            min="1" 
+            max="20" 
             step="1"
             value={localRadius} 
             onChange={(e) => setLocalRadius(parseInt(e.target.value))}
@@ -72,9 +72,9 @@ export const MapControlTab: React.FC<MapControlTabProps> = ({
             className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#00f0ff] focus:outline-none"
           />
           <div className="flex justify-between text-[9px] text-gray-500 font-mono">
-            <span>5k</span>
-            <span>15k</span>
-            <span>25k</span>
+            <span>1k</span>
+            <span>10k</span>
+            <span>20k</span>
           </div>
         </div>
 
