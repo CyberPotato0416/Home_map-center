@@ -118,14 +118,19 @@ export default function App() {
   const [sidebarWidth, setSidebarWidth] = useState<number>(420);
   const [isSidebarDragging, setIsSidebarDragging] = useState<boolean>(false);
 
-  // Load rentals from localStorage on mount
+  // Load rentals from localStorage on mount and exclude test objects
   useEffect(() => {
     const saved = localStorage.getItem('my_rental_pins');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          setRentals(parsed);
+          const cleaned = parsed.filter((r: any) => r && r.id && !String(r.id).startsWith('rental-'));
+          setRentals(cleaned);
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('my_rental_pins', JSON.stringify(cleaned));
+            console.log(`[Persistence] Filtered out ${parsed.length - cleaned.length} test objects from localStorage.`);
+          }
         }
       } catch (e) {
         console.error("Failed to parse saved rentals", e);
