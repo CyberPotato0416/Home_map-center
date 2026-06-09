@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Building, Image as ImageIcon, Train, Navigation, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { RentalProperty } from '../types';
-import { calculateDistance } from '../utils';
+import { calculateDistance, calculateWeightedScore } from '../utils';
 import { COMPANY_COORDS, MRT_STATIONS_DATA } from '../constants';
 
 interface RentalImportTabProps {
@@ -40,13 +40,14 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
       }
     });
 
-    const score = Math.max(0, Math.round(100 - (distToOffice / 100) - (minMrtDist / 20)));
+    const scoreResult = calculateWeightedScore(selectedRental, distToOffice, minMrtDist);
 
     return {
       distToOffice,
       nearestMrt,
       minMrtDist,
-      score
+      score: scoreResult.totalScore,
+      breakdown: scoreResult.breakdown
     };
   }, [selectedRental]);
 
@@ -150,7 +151,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
                   <Navigation className="w-3 h-3 text-[#00f0ff]" />
-                  GIS 通勤指標
+                  GIS 通勤與決策指標
                 </span>
                 <div className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 ${commuteData.score >= 80 ? 'bg-emerald-500/20 text-emerald-400' : commuteData.score >= 60 ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-400'}`}>
                   SCORE {commuteData.score}
@@ -177,6 +178,27 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Score breakdown detailed checklist */}
+              {commuteData.breakdown && commuteData.breakdown.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-white/5 space-y-1">
+                  <div className="text-[9px] font-bold text-gray-500 tracking-wider uppercase mb-1">評分與扣分明細</div>
+                  <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto pr-1">
+                    {commuteData.breakdown.map((item, idx) => {
+                      const scoreText = item.score > 0 ? `+${item.score}` : `${item.score}`;
+                      const colorClass = item.type === 'positive' ? 'text-emerald-400 bg-emerald-500/5 border border-emerald-500/10' : 
+                                         item.type === 'negative' ? 'text-red-400 bg-red-500/5 border border-red-500/10' : 
+                                         'text-gray-400 bg-gray-500/5 border border-gray-500/10';
+                      return (
+                        <div key={idx} className={`flex items-center justify-between text-[10px] px-2 py-1 rounded ${colorClass}`}>
+                          <span className="font-medium">{item.name} <span className="opacity-60 font-mono text-[9px]">({item.value})</span></span>
+                          <span className="font-mono font-bold">{scoreText}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
