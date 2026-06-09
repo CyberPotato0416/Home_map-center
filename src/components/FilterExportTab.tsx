@@ -89,12 +89,12 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                 price = parseInt(val.replace(/[^0-9]/g, ''), 10);
               } else if (['title', 'name', '名稱', '標題', '租屋'].some(kw => lowerK.includes(kw))) {
                 title = val;
-              } else if (['link', 'url', '網址', '連結'].some(kw => lowerK.includes(kw))) {
-                link = val;
               } else if (['image', 'photo', '照片', '圖片'].some(kw => lowerK.includes(kw))) {
                 if (val) {
                   images = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
                 }
+              } else if (['591', 'source_591_url', 'link', 'url', '網址', '連結'].some(kw => lowerK.includes(kw))) {
+                link = val;
               } else if (['pros', '優點'].some(kw => lowerK.includes(kw))) {
                 if (val) {
                   pros = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
