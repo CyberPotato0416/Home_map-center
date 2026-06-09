@@ -242,6 +242,40 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
     breakdown.push({ name: '租屋補助', value: '可申請', score: 20, type: 'positive' });
   }
 
+  // Bathroom Grade (衛浴等級)
+  // 5級: 30分, 4級: 15分, 3級: 5分, 2級: 0分, 1級: 0分 (1, 2級為感到不適的類型)
+  const bathroomGrade = getNumber(['衛浴等級', '衛浴']);
+  if (bathroomGrade !== null) {
+    let bathroomScore = 0;
+    if (bathroomGrade === 5) bathroomScore = 30;
+    else if (bathroomGrade === 4) bathroomScore = 15;
+    else if (bathroomGrade === 3) bathroomScore = 5;
+    else if (bathroomGrade === 2) bathroomScore = 0;
+    else if (bathroomGrade === 1) bathroomScore = 0;
+
+    score += bathroomScore;
+    breakdown.push({
+      name: '衛浴等級',
+      value: `${bathroomGrade} 級`,
+      score: bathroomScore,
+      type: bathroomScore > 0 ? 'positive' : 'neutral'
+    });
+  }
+
+  // Decoration Grade (裝潢等級)
+  // 5星: 10分, 4星: 5分, 3星: 0分, 2星: -5分, 1星: -10分
+  const decoGrade = getNumber(['裝潢等級', '裝潢']);
+  if (decoGrade !== null) {
+    const decoScore = (decoGrade - 3) * 5;
+    score += decoScore;
+    breakdown.push({
+      name: '裝潢等級',
+      value: `${decoGrade} 星`,
+      score: decoScore,
+      type: decoScore > 0 ? 'positive' : decoScore < 0 ? 'negative' : 'neutral'
+    });
+  }
+
   // Electric Meter & Pricing
   const isIndependentMeter = hasKeyword(['獨立電表']);
   const isSharedMeter = hasKeyword(['共用電表']);
