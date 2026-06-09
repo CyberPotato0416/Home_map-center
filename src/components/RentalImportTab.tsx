@@ -134,12 +134,23 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
             </div>
             <h3 className="text-sm font-bold text-gray-100 leading-snug mb-2">{selectedRental.title}</h3>
             
-            <div className="flex items-baseline gap-2 text-xs font-mono">
+            <div className="flex items-baseline gap-2 text-xs font-mono mb-1.5">
               <span className="text-[#00f0ff] font-bold text-xl tracking-tight">
                 NT$ {selectedRental.price.toLocaleString()}
               </span>
               <span className="text-[11px] text-gray-500 font-normal">/ 月</span>
             </div>
+            
+            {(selectedRental.customFields['管理費'] || selectedRental.customFields['服務費']) && (
+              <div className="flex gap-4 text-[11px] text-gray-400 font-sans mb-1">
+                {selectedRental.customFields['管理費'] && (
+                  <span className="flex items-center gap-1">🏢 管理費: <span className="text-gray-200 font-semibold">{selectedRental.customFields['管理費']}</span></span>
+                )}
+                {selectedRental.customFields['服務費'] && (
+                  <span className="flex items-center gap-1">💸 服務費: <span className="text-emerald-400 font-semibold">{selectedRental.customFields['服務費']}</span></span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 3. GIS Analytics Badge */}

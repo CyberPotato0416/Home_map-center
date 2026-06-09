@@ -221,6 +221,22 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
     contact_line = link_info.get("line", "").strip()
     contact_role = link_info.get("roleName", "").strip()
 
+    # 1. 解析管理費
+    cost_data = detail.get("costData", {})
+    manage_price = "無"
+    if cost_data and "data" in cost_data:
+        for item in cost_data["data"]:
+            if item.get("key") == "manageprice":
+                manage_price = item.get("value", "無").strip()
+
+    # 2. 解析服務費
+    is_service_fee = link_info.get("isServiceFee")
+    service_fee_txt = "無"
+    if is_service_fee == 1:
+        service_fee_txt = link_info.get("isrecmoney", "有").strip()
+        if not service_fee_txt or service_fee_txt == "收服務費":
+            service_fee_txt = "半個月租金"
+
     # 下載圖片到本地
     local_images = download_images(opener, images, house_id, csv_path, log_func)
                 
@@ -245,6 +261,8 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
         "聯絡電話": contact_phone,
         "Line聯絡": contact_line,
         "聯絡人身分": contact_role,
+        "管理費": manage_price,
+        "服務費": service_fee_txt,
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     }
     
@@ -286,7 +304,7 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None):
         "id", "title", "price", "size_ping", "floor", "type", "address", 
         "latitude", "longitude", "source_591_url", "original_591_id", 
         "images", "original_image_urls", "mrt_nearest_name", "mrt_nearest_distance", "facilities", 
-        "聯絡人", "聯絡電話", "Line聯絡", "聯絡人身分", "created_at"
+        "聯絡人", "聯絡電話", "Line聯絡", "聯絡人身分", "管理費", "服務費", "created_at"
     ]
     
     # 讀取既有 CSV 中已記錄的 591 ID，避免重複寫入同一筆物件
