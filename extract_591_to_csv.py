@@ -252,6 +252,16 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
     public_fee = "不詳"
     parking_fee = "不詳"
 
+    # 4. 擷取朝向 (e.g. 坐北朝南)
+    orientation = "不詳"
+    orient_match = re.search(r'朝向[：:]\s*([^\s<>,;""\'，。]+)', html)
+    if orient_match:
+        orientation = orient_match.group(1).strip()
+    else:
+        orient_pattern = re.search(r'(坐[東西南北]朝[東西南北])', html)
+        if orient_pattern:
+            orientation = orient_pattern.group(1).strip()
+
     # 下載圖片到本地
     local_images = download_images(opener, images, house_id, csv_path, log_func)
                 
@@ -290,6 +300,7 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
         "變頻冷氣": ac_inverter,
         "垃圾代收": trash_service,
         "租屋補助": subsidy_ok,
+        "朝向": orientation,
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     }
     
@@ -332,7 +343,7 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None):
         "latitude", "longitude", "source_591_url", "original_591_id", 
         "images", "original_image_urls", "mrt_nearest_name", "mrt_nearest_distance", "facilities", 
         "聯絡人", "聯絡電話", "Line聯絡", "聯絡人身分", "管理費", "服務費",
-        "裝潢等級", "衛浴等級", "電表類型", "電費", "公用費用", "停車位", "停車費", "電梯", "洗衣機", "變頻冷氣", "垃圾代收", "租屋補助",
+        "裝潢等級", "衛浴等級", "電表類型", "電費", "公用費用", "停車位", "停車費", "電梯", "洗衣機", "變頻冷氣", "垃圾代收", "租屋補助", "朝向",
         "created_at"
     ]
     

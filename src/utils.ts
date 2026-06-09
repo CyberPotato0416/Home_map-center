@@ -379,12 +379,10 @@ export function calculateWeightedScore(
   } else if (!hasElevator) {
     if (floorNum <= 2) {
       floorScore = 0;
-    } else if (floorNum === 3) {
+    } else if (floorNum >= 3 && floorNum <= 5) {
       floorScore = -5;
-    } else if (floorNum === 4) {
-      floorScore = -15;
-    } else if (floorNum >= 5) {
-      floorScore = -25;
+    } else if (floorNum >= 6) {
+      floorScore = -10;
     }
   }
   score += floorScore;
@@ -415,6 +413,63 @@ export function calculateWeightedScore(
       score: 10,
       value: '室內免費車位',
       type: 'positive',
+    });
+  }
+
+  // 13. Balcony (陽台)
+  const hasBalcony = facilitiesList.includes('陽台') || titleLower.includes('陽台') || notesLower.includes('陽台') || titleLower.includes('露台') || titleLower.includes('露臺') || notesLower.includes('露台') || notesLower.includes('露臺');
+  if (hasBalcony) {
+    score += 8;
+    breakdown.push({
+      name: '陽台 (模型噴漆/透氣)',
+      score: 8,
+      value: '有',
+      type: 'positive',
+    });
+  } else {
+    breakdown.push({
+      name: '陽台 (模型噴漆/透氣)',
+      score: 0,
+      value: '無',
+      type: 'neutral',
+    });
+  }
+
+  // 14. Public Space (公共空間/頂樓)
+  const hasPublicSpace = titleLower.includes('頂樓') || notesLower.includes('頂樓') || notesLower.includes('公共空間') || notesLower.includes('公用空間') || notesLower.includes('露台') || notesLower.includes('露臺') || titleLower.includes('露台') || titleLower.includes('露臺') || isTopAddition;
+  if (hasPublicSpace) {
+    score += 12;
+    breakdown.push({
+      name: '公共空間 (頂樓/雜物器材存放)',
+      score: 12,
+      value: '有',
+      type: 'positive',
+    });
+  } else {
+    breakdown.push({
+      name: '公共空間 (頂樓/雜物器材存放)',
+      score: 0,
+      value: '無',
+      type: 'neutral',
+    });
+  }
+
+  // 15. Kitchen (廚房)
+  const hasKitchen = facilitiesList.includes('廚房') || facilitiesList.includes('天然瓦斯') || titleLower.includes('廚房') || titleLower.includes('開伙') || titleLower.includes('可煮') || notesLower.includes('廚房') || notesLower.includes('開伙') || notesLower.includes('天然瓦斯') || notesLower.includes('可煮');
+  if (hasKitchen) {
+    score += 10;
+    breakdown.push({
+      name: '廚房/開伙',
+      score: 10,
+      value: '有',
+      type: 'positive',
+    });
+  } else {
+    breakdown.push({
+      name: '廚房/開伙',
+      score: 0,
+      value: '無',
+      type: 'neutral',
     });
   }
 
