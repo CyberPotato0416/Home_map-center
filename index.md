@@ -33,7 +33,34 @@
 
 ---
 
+## 📊 CSV 資料集檢視設定與欄位對照 (CSV Sheet View)
+
+本地端的租屋資料集位於 **[rentals_import.csv](file:///H:/645_Home_map-center/public/rentals_import.csv)**。為了方便人工閱讀，使用者開啟此 CSV 檔時的偏好設定與排版規範如下：
+
+| 欄位 (Column) | 欄位名稱 (Header) | 檢視設定 (View Setting) | 說明 / 格式 |
+|:---:|:---|:---|:---|
+| **A** | `id` | 🚫 **隱藏 (Hidden)** | 系統產生之唯一識別碼 |
+| **B** | `title` | 🔄 **自動換行 (寬度 60)** | 租屋標題描述 |
+| **C** | `price` | 顯示 | 租金月租費 (TWD) |
+| **D** | `size_ping` | 顯示 | 坪數 |
+| **E** | `floor` | 顯示 | 樓層 |
+| **F** | `type` | 顯示 | 房屋類型 (獨立套房、分租套房等) |
+| **G** | `address` | 顯示 | 詳細地址 |
+| **H** | `latitude` | 🚫 **隱藏 (Hidden)** | 緯度坐標 |
+| **I** | `longitude` | 🚫 **隱藏 (Hidden)** | 經度坐標 |
+| **J** | `source_591_url` | 顯示 | 591 原始租屋連結 |
+| **K** | `original_591_id`| 🚫 **隱藏 (Hidden)** | 591 原始物件 ID |
+| **L** | `images` | 🚫 **隱藏 (Hidden)** | 本地存檔圖片路徑 |
+| **M** | `original_image_urls`| 🚫 **隱藏 (Hidden)** | 591 原始圖片網址 |
+| **N** | `mrt_nearest_name`| 顯示 | 最近捷運站名稱 |
+| **O** | `mrt_nearest_distance`| 顯示 | 距捷運站距離 (公尺) |
+| **P** | `facilities` | 🔄 **自動換行 (寬度 80)** | 房屋配備設施列表 |
+| **Q** | `created_at` | 🚫 **隱藏 (Hidden)** | 資料建立時間戳 |
+
+---
+
 ## 🛠️ 地端輔助工具
 
 *   **[extract_591_to_csv.py](file:///H:/645_Home_map-center/extract_591_to_csv.py)**：591 租屋資訊擷取與 CSV 轉檔工具。
 *   **[extract_pdf.py](file:///H:/645_Home_map-center/extract_pdf.py)**：PDF 資料抽取解析工具。
+
