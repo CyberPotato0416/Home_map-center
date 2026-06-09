@@ -28,7 +28,7 @@ export default function App() {
   const [mapCenterPos, setMapCenterPos] = useState<{ lat: number; lng: number }>({ lat: 25.0617, lng: 121.5435 }); // Track current center
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true); // Collapsible sidebar state
-  const [isInfoCardOpen, setIsInfoCardOpen] = useState<boolean>(true); // Collapsible Floating HUD card state
+  const [isInfoCardOpen, setIsInfoCardOpen] = useState<boolean>(false); // Collapsible Floating HUD card state
 
   // Heatmap GeoJSON states
   const [showHeatmap, setShowHeatmap] = useState<boolean>(true);
@@ -200,11 +200,22 @@ export default function App() {
         zIndexOffset: isSelected ? 2000 : 1000
       });
 
+      let displayLink = rental.link || '';
+      // If the currently stored link is actually a bunch of images (legacy corrupted state)
+      if (displayLink.includes('.jpg') || displayLink.includes('img')) {
+        displayLink = '';
+      }
+      
+      // Attempt to reconstruct 591 link
+      if (!displayLink && rental.customFields?.original_591_id) {
+        displayLink = `https://rent.591.com.tw/${rental.customFields.original_591_id}`;
+      }
+      
       const popupHtml = `
         <div class="font-sans text-[11px] leading-relaxed select-none min-w-[140px] max-w-[200px]">
           <div class="font-bold text-gray-100 mb-1 leading-tight text-[12px]">${rental.title}</div>
           <div class="text-[#00f0ff] font-mono font-bold mb-1.5">${rental.price.toLocaleString()} 元/月</div>
-          ${rental.link ? `<a href="${rental.link}" target="_blank" rel="noreferrer" class="text-gray-400 hover:text-white underline underline-offset-2 text-[10px]">前往 591</a>` : ''}
+          ${displayLink ? `<a href="${displayLink}" target="_blank" rel="noreferrer" class="text-gray-400 hover:text-white underline underline-offset-2 text-[10px]">前往 591</a>` : ''}
         </div>
       `;
 
@@ -235,14 +246,14 @@ export default function App() {
     if (!mapInstanceRef.current) return;
     
     // Call immediately to start size adjustment
-    mapInstanceRef.current.invalidateSize({ animate: true });
+    mapInstanceRef.current.invalidateSize({ pan: false });
 
     // Sequence periodic invalidations to catch the CSS transition midway and at completion
     const intervals = [100, 200, 300, 400, 500];
     const timers = intervals.map(delay => {
       return setTimeout(() => {
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.invalidateSize({ animate: true });
+          mapInstanceRef.current.invalidateSize({ pan: false });
         }
       }, delay);
     });
@@ -251,6 +262,23 @@ export default function App() {
       timers.forEach(clearTimeout);
     };
   }, [isSidebarOpen]);
+
+  // Track map container size changes automatically without panning
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    
+    const observer = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize({ pan: false });
+      }
+    });
+    
+    observer.observe(mapContainerRef.current);
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // Click handler to refocus back to corporate headquarters using the 30km circle bounds with tight padding
   const handleResetMap = () => {
@@ -297,7 +325,7 @@ export default function App() {
       <div 
         id="map-container" 
         className={`h-[60vh] md:h-full relative overflow-hidden transition-all duration-300 ease-in-out order-1 md:order-1 border-r border-[#1e2330] ${!showMrtLabels ? 'hide-mrt-labels' : ''} ${
-          isSidebarOpen ? 'w-full md:w-[75%]' : 'w-full md:w-full'
+          isSidebarOpen ? 'w-full flex-1' : 'w-full md:w-full flex-1'
         }`}
       >
         
@@ -392,7 +420,7 @@ export default function App() {
         isSidebarDragging={isSidebarDragging}
         setIsSidebarDragging={setIsSidebarDragging}
         onResizeComplete={() => {
-          if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+          if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize({ pan: false });
         }}
       />
     </div>

@@ -89,12 +89,16 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                 price = parseInt(val.replace(/[^0-9]/g, ''), 10);
               } else if (['title', 'name', '名稱', '標題', '租屋'].some(kw => lowerK.includes(kw))) {
                 title = val;
-              } else if (lowerK === 'source_591_url' || ['591_url', '591', 'link', 'url', '網址', '連結'].some(kw => lowerK === kw || (lowerK.includes(kw) && !['img', 'photo', 'pic', 'cover', 'image'].some(bad => lowerK.includes(bad))))) {
+              } else if (lowerK === 'source_591_url' || lowerK === 'url' || lowerK === 'link' || lowerK === '網址' || lowerK === '連結') {
                 if (!link || lowerK === 'source_591_url') {
                   link = val;
                 }
               } else if (['image', 'img', 'pic', 'photo', '照片', '圖片', 'cover'].some(kw => lowerK.includes(kw))) {
-                if (val) {
+                if (val && !lowerK.includes('original')) {
+                  // Prefer local images (without 'original' in key)
+                  images = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
+                } else if (val && images.length === 0) {
+                  // Fallback to original image URLs
                   images = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
                 }
               } else if (['pros', '優點'].some(kw => lowerK.includes(kw))) {

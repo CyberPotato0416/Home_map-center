@@ -39,442 +39,251 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
   return R * c; // 回傳公尺數
 }
 
-export interface ScoreBreakdownItem {
+export interface ScoreBreakdown {
   name: string;
-  score: number;
   value: string;
+  score: number;
   type: 'positive' | 'negative' | 'neutral';
 }
 
-export interface ScoreResult {
+export interface RPGScoreData {
   totalScore: number;
-  breakdown: ScoreBreakdownItem[];
+  commuteScore: number;
+  spaceScore: number;
+  budgetScore: number;
+  convenienceScore: number;
+  breakdown: ScoreBreakdown[];
+  features: {
+    electricity: string;
+    trash: string;
+    ac: string;
+  };
+  notes: string;
 }
 
-export function calculateWeightedScore(
-  property: any,
-  distToOffice: number,
-  minMrtDist: number
-): ScoreResult {
-  let score = 100;
-  const breakdown: ScoreBreakdownItem[] = [];
+export function calculateHomeScore(rental: any, distToOfficeMeters: number, minMrtDist: number = 0): RPGScoreData {
+  let score = 50; // Base score
+  const breakdown: ScoreBreakdown[] = [];
 
-  // 1. GIS Commute Penalty
-  const distPenalty = Math.round(distToOffice / 100);
-  if (distPenalty > 0) {
-    score -= distPenalty;
-    breakdown.push({
-      name: '距公司通勤距離',
-      score: -distPenalty,
-      value: distToOffice < 1000 ? `${Math.round(distToOffice)}m` : `${(distToOffice / 1000).toFixed(1)}km`,
-      type: 'negative',
-    });
-  }
-
-  const mrtPenalty = Math.round(minMrtDist / 20);
-  if (mrtPenalty > 0) {
-    score -= mrtPenalty;
-    breakdown.push({
-      name: '捷運站距離',
-      score: -mrtPenalty,
-      value: `${Math.round(minMrtDist)}m`,
-      type: 'negative',
-    });
-  }
-
-  // Helper to get field values case-insensitively
-  const getField = (keys: string[]): string => {
-    for (const key of keys) {
-      if (property.customFields) {
-        for (const [k, v] of Object.entries(property.customFields)) {
-          if (k.toLowerCase() === key.toLowerCase()) {
-            return String(v).trim();
-          }
-        }
-      }
+  const getField = (keywords: string[]) => {
+    for (const [key, val] of Object.entries(rental.customFields || {})) {
+      if (keywords.some(k => key.toLowerCase().includes(k))) return String(val).toLowerCase();
     }
     return '';
   };
 
-  // Helper to check yes/no boolean values
-  const isYes = (val: string): boolean => {
-    if (!val) return false;
-    const lower = val.toLowerCase();
-    return ['是', 'y', 'yes', 'true', '有', '1', '✔️', '✅'].some(kw => lower.includes(kw));
+  const hasKeyword = (keywords: string[]) => {
+    const val = getField(keywords);
+    if (val === '是' || val === '有' || val === 'yes' || val === 'true') return true;
+    const notesLower = (rental.customFields?.notes || rental.notes || '').toLowerCase();
+    const titleLower = (rental.title || '').toLowerCase();
+    return keywords.some(k => titleLower.includes(k) || notesLower.includes(k));
   };
 
-  const isNo = (val: string): boolean => {
-    if (!val) return false;
-    const lower = val.toLowerCase();
-    return ['否', 'n', 'no', 'false', '無', '0', '❌'].some(kw => lower.includes(kw));
+  const getNumber = (keywords: string[]) => {
+    const val = getField(keywords);
+    const num = parseFloat(val.replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? null : num;
   };
 
-  // Get facilities
-  const facilitiesStr = getField(['facilities']) || property.customFields?.facilities || '';
-  const facilitiesList = typeof facilitiesStr === 'string' 
-    ? facilitiesStr.split(/[;,]/).map(s => s.trim().toLowerCase())
-    : [];
+  // 1. Commute
+  const commuteScore = Math.max(0, Math.min(10, 10 - distToOfficeMeters / 300));
+  let commuteDistScore = distToOfficeMeters < 1000 ? 5 : distToOfficeMeters < 2000 ? -10 : -25;
+  if (distToOfficeMeters < 600) commuteDistScore = 15;
+  score += commuteDistScore;
+  breakdown.push({
+    name: '距公司距離',
+    value: distToOfficeMeters < 1000 ? `${Math.round(distToOfficeMeters)}m` : `${(distToOfficeMeters / 1000).toFixed(1)}km`,
+    score: commuteDistScore,
+    type: commuteDistScore > 0 ? 'positive' : commuteDistScore < 0 ? 'negative' : 'neutral'
+  });
 
-  const titleLower = (property.title || '').toLowerCase();
-  const notesLower = (getField(['notes', '備註']) || '').toLowerCase();
-
-  // 2. Elevator (電梯)
-  const elevatorVal = getField(['電梯', '有電梯']);
-  let hasElevator = false;
-  if (elevatorVal) {
-    hasElevator = isYes(elevatorVal);
-  } else {
-    // Fallback to facilities or title/notes
-    hasElevator = facilitiesList.includes('電梯') || titleLower.includes('電梯') || notesLower.includes('電梯');
+  // MRT Dist
+  let mrtScore = 0;
+  if (minMrtDist > 0) {
+    if (minMrtDist <= 500) mrtScore = 10;
+    else if (minMrtDist <= 800) mrtScore = 5;
+    else if (minMrtDist <= 1200) mrtScore = -5;
+    else mrtScore = -15;
+    score += mrtScore;
+    breakdown.push({
+      name: '捷運站距離',
+      value: `${Math.round(minMrtDist)}m`,
+      score: mrtScore,
+      type: mrtScore > 0 ? 'positive' : mrtScore < 0 ? 'negative' : 'neutral'
+    });
   }
+
+  // 2. Space Ping
+  const pingValue = getNumber(['坪數', '坪']) || 5; // Default to 5
+  const spaceScore = Math.min(10, pingValue / 1.5);
+
+  // 3. Budget
+  const budgetScore = Math.max(0, Math.min(10, (20000 - rental.price) / 1000));
+
+  // 4. Convenience (Elevator & Floor)
+  let convenienceScore = 5;
+  const hasElevator = hasKeyword(['電梯', 'elevator']);
+  const floorVal = getField(['樓層', 'floor']) || String(rental.floor || '');
+  let isBasement = floorVal.includes('b') || floorVal.includes('地下');
+  let floorNum = parseInt(floorVal.match(/(-?\d+)/)?.[1] || '1', 10);
+
+  let curConvenienceAdd = 0;
+  let floorValStr = '未知';
 
   if (hasElevator) {
-    score += 15;
-    breakdown.push({
-      name: '電梯',
-      score: 15,
-      value: '有',
-      type: 'positive',
-    });
+    convenienceScore = 10;
+    curConvenienceAdd = 15;
+    floorValStr = '有電梯';
   } else {
-    breakdown.push({
-      name: '電梯',
-      score: 0,
-      value: '無',
-      type: 'neutral',
-    });
-  }
-
-  // 3. Washing Machine (洗衣機)
-  const washingVal = getField(['洗衣機', '獨洗', '獨立洗衣機']);
-  let washingMachine = '未知';
-  let washingScore = 0;
-  if (washingVal) {
-    if (isYes(washingVal) || washingVal.includes('獨洗') || washingVal.includes('獨立')) {
-      washingMachine = '獨立';
-      washingScore = 10;
-    } else if (isNo(washingVal) || washingVal.includes('共用')) {
-      washingMachine = '共用/無';
-      washingScore = -5;
-    }
-  } else {
-    if (facilitiesList.includes('洗衣機') || titleLower.includes('獨洗') || titleLower.includes('獨立洗衣機')) {
-      washingMachine = '獨立';
-      washingScore = 10;
+    if (isBasement) {
+      convenienceScore = 0;
+      curConvenienceAdd = -30;
+      floorValStr = '地下室';
+    } else if (floorNum <= 2) {
+      convenienceScore = 10;
+      curConvenienceAdd = 0;
+      floorValStr = `${floorNum} 樓`;
+    } else if (floorNum === 3) {
+      convenienceScore = 8;
+      curConvenienceAdd = -5;
+      floorValStr = '無電梯 3 樓';
+    } else if (floorNum === 4) {
+      convenienceScore = 7;
+      curConvenienceAdd = -15;
+      floorValStr = '無電梯 4 樓';
+    } else if (floorNum === 5) {
+      convenienceScore = 6;
+      curConvenienceAdd = -5;
+      floorValStr = '無電梯 5 樓';
+    } else if (floorNum >= 6) {
+      convenienceScore = 2;
+      curConvenienceAdd = -10;
+      floorValStr = `無電梯 ${floorNum} 樓`;
     } else {
-      washingMachine = '共用或無';
-      washingScore = -5;
+      convenienceScore = 10;
+      curConvenienceAdd = 0;
+      floorValStr = '無電梯低樓層';
     }
   }
-  score += washingScore;
+  score += curConvenienceAdd;
   breakdown.push({
-    name: '獨立洗衣機',
-    score: washingScore,
-    value: washingMachine,
-    type: washingScore > 0 ? 'positive' : washingScore < 0 ? 'negative' : 'neutral',
+    name: '電梯/樓層',
+    value: floorValStr,
+    score: curConvenienceAdd,
+    type: curConvenienceAdd > 0 ? 'positive' : curConvenienceAdd < 0 ? 'negative' : 'neutral'
   });
 
-  // 4. Inverter AC (變頻冷氣)
-  const acVal = getField(['變頻冷氣', '變頻']);
-  let acType = '未知';
+  // Balcony
+  if (hasKeyword(['陽台', 'balcony'])) {
+    score += 8;
+    breakdown.push({ name: '陽台', value: '模型噴漆與透氣', score: 8, type: 'positive' });
+  }
+  
+  // Rooftop / Public space
+  if (hasKeyword(['頂樓', '公共空間', 'rooftop'])) {
+    score += 12;
+    breakdown.push({ name: '公共空間/頂樓', value: '擺放雜物、模型器材', score: 12, type: 'positive' });
+  }
+
+  // Kitchen
+  if (hasKeyword(['廚房', '開伙', 'kitchen'])) {
+    score += 10;
+    breakdown.push({ name: '廚房/開伙', value: '可', score: 10, type: 'positive' });
+  }
+
+  // AC Type
+  const isVariableAC = hasKeyword(['變頻冷氣', '變頻']);
+  const isFixedAC = hasKeyword(['定頻冷氣', '定頻']);
+  let acInfo = '未知';
   let acScore = 0;
-  if (acVal) {
-    if (isYes(acVal) || acVal.includes('變頻')) {
-      acType = '變頻冷氣';
-      acScore = 10;
-    } else if (isNo(acVal) || acVal.includes('定頻')) {
-      acType = '定頻冷氣';
-      acScore = -5;
-    }
-  } else {
-    if (titleLower.includes('變頻') || notesLower.includes('變頻')) {
-      acType = '變頻冷氣';
-      acScore = 10;
-    } else if (titleLower.includes('定頻') || notesLower.includes('定頻')) {
-      acType = '定頻冷氣';
-      acScore = -5;
-    }
+  if (isVariableAC) {
+    acScore = 10;
+    acInfo = '變頻冷氣';
+  } else if (isFixedAC) {
+    acScore = -5;
+    acInfo = '定頻冷氣';
   }
   score += acScore;
-  breakdown.push({
-    name: '變頻冷氣',
-    score: acScore,
-    value: acType,
-    type: acScore > 0 ? 'positive' : acScore < 0 ? 'negative' : 'neutral',
-  });
+  breakdown.push({ name: '冷氣類型', value: acInfo, score: acScore, type: acScore > 0 ? 'positive' : acScore < 0 ? 'negative' : 'neutral' });
 
-  // 5. Trash Collection (垃圾代收)
-  const trashVal = getField(['垃圾代收', '垃圾處理', '代收垃圾']);
-  let hasTrash = false;
-  if (trashVal) {
-    hasTrash = isYes(trashVal);
-  } else {
-    hasTrash = titleLower.includes('垃圾代收') || titleLower.includes('垃圾處理') || notesLower.includes('垃圾代收') || notesLower.includes('垃圾處理') || notesLower.includes('代收垃圾');
+  // Washing Machine
+  const isIndependentWashing = hasKeyword(['獨洗', '獨立洗衣機']);
+  const isSharedWashing = hasKeyword(['共洗', '共用洗衣機', '無洗衣機']);
+  let washScore = 0;
+  let washInfo = '未知';
+  if (isIndependentWashing) {
+    washScore = 10;
+    washInfo = '獨立洗衣機';
+  } else if (isSharedWashing) {
+    washScore = -5;
+    washInfo = '共用/無';
   }
+  score += washScore;
+  breakdown.push({ name: '洗衣機', value: washInfo, score: washScore, type: washScore > 0 ? 'positive' : washScore < 0 ? 'negative' : 'neutral' });
+
+  // Trash
+  const hasTrash = hasKeyword(['垃圾代收', '垃圾處理']);
+  let trashInfo = '無';
   if (hasTrash) {
     score += 15;
-    breakdown.push({
-      name: '垃圾代收',
-      score: 15,
-      value: '有',
-      type: 'positive',
-    });
+    trashInfo = '有垃圾代收';
+    breakdown.push({ name: '垃圾代收', value: '免追垃圾車', score: 15, type: 'positive' });
   } else {
-    breakdown.push({
-      name: '垃圾代收',
-      score: 0,
-      value: '無',
-      type: 'neutral',
-    });
+    breakdown.push({ name: '垃圾代收', value: '無', score: 0, type: 'neutral' });
   }
 
-  // 6. Rent Subsidy (租屋補助)
-  const subsidyVal = getField(['租屋補助', '補助', '可租補']);
-  let hasSubsidy = false;
-  if (subsidyVal) {
-    hasSubsidy = isYes(subsidyVal);
-  } else {
-    hasSubsidy = titleLower.includes('租補') || titleLower.includes('可租補') || titleLower.includes('租屋補助') || notesLower.includes('租補') || notesLower.includes('可租補') || notesLower.includes('租屋補助');
-  }
-  if (hasSubsidy) {
+  // Subsidy
+  if (hasKeyword(['租補', '補助', '可申請租補', '租屋補助'])) {
     score += 10;
-    breakdown.push({
-      name: '租屋補助',
-      score: 10,
-      value: '可申請',
-      type: 'positive',
-    });
-  } else {
-    breakdown.push({
-      name: '租屋補助',
-      score: 0,
-      value: '不可/未知',
-      type: 'neutral',
-    });
+    breakdown.push({ name: '租屋補助', value: '可申請', score: 10, type: 'positive' });
   }
 
-  // 7. Decoration Stars (裝潢等級)
-  const decVal = getField(['裝潢等級', '裝潢']);
-  let decScore = 0;
-  const decLevel = parseInt(decVal.replace(/[^0-9]/g, ''), 10);
-  if (!isNaN(decLevel) && decLevel >= 1 && decLevel <= 5) {
-    decScore = (decLevel - 3) * 5;
-    score += decScore;
-    breakdown.push({
-      name: '裝潢等級',
-      score: decScore,
-      value: `${decLevel} 星`,
-      type: decScore > 0 ? 'positive' : decScore < 0 ? 'negative' : 'neutral',
-    });
-  } else {
-    breakdown.push({
-      name: '裝潢等級',
-      score: 0,
-      value: '未知',
-      type: 'neutral',
-    });
+  // Electric Meter & Pricing
+  const isIndependentMeter = hasKeyword(['獨立電表']);
+  const isSharedMeter = hasKeyword(['共用電表']);
+  let electricInfo = '未知';
+  const electricPrice = getNumber(['電費', '電價', '電費計價']);
+
+  if (isIndependentMeter) {
+    electricInfo = electricPrice ? `${electricPrice} 元/度 (獨立電表)` : '獨立電表';
+  } else if (isSharedMeter) {
+    electricInfo = electricPrice ? `${electricPrice} 元/度 (共用電表)` : '共用電表';
+  } else if (electricPrice) {
+    electricInfo = `${electricPrice} 元/度`;
   }
 
-  // 8. Bathroom Stars (衛浴等級)
-  const bathVal = getField(['衛浴等級', '衛浴']);
-  let bathScore = 0;
-  const bathLevel = parseInt(bathVal.replace(/[^0-9]/g, ''), 10);
-  if (!isNaN(bathLevel) && bathLevel >= 1 && bathLevel <= 5) {
-    bathScore = (bathLevel - 3) * 5;
-    score += bathScore;
-    breakdown.push({
-      name: '衛浴等級',
-      score: bathScore,
-      value: `${bathLevel} 星`,
-      type: bathScore > 0 ? 'positive' : bathScore < 0 ? 'negative' : 'neutral',
-    });
-  } else {
-    breakdown.push({
-      name: '衛浴等級',
-      score: 0,
-      value: '未知',
-      type: 'neutral',
-    });
-  }
+  let electricScore = 0;
+  if (isIndependentMeter) electricScore += 10;
+  else if (isSharedMeter) electricScore -= 5;
 
-  // 9. Electricity Pricing (電費)
-  const elecVal = getField(['電費', '電費計價', '電費度', '公用費用']);
-  let elecScore = 0;
-  let elecValueTxt = '未知';
-  const elecMatch = elecVal.match(/\d+(\.\d+)?/);
-  if (elecMatch) {
-    const elecPrice = parseFloat(elecMatch[0]);
-    elecValueTxt = `${elecPrice} 元/度`;
-    if (elecPrice <= 4.0) {
-      elecScore = 5;
-    } else if (elecPrice <= 5.0) {
-      elecScore = 0;
-    } else if (elecPrice <= 6.0) {
-      elecScore = -5;
-    } else {
-      elecScore = -15;
-    }
-    score += elecScore;
-    breakdown.push({
-      name: '電費計價',
-      score: elecScore,
-      value: elecValueTxt,
-      type: elecScore > 0 ? 'positive' : elecScore < 0 ? 'negative' : 'neutral',
-    });
-  } else {
-    breakdown.push({
-      name: '電費計價',
-      score: 0,
-      value: '未知',
-      type: 'neutral',
-    });
+  if (electricPrice) {
+    if (electricPrice >= 6.1) electricScore -= 15;
+    else if (electricPrice >= 5.1) electricScore -= 5;
   }
-
-  // 10. Electricity Meter Type (電表類型)
-  const meterVal = getField(['電表類型', '電錶類型', '電表', '電錶']);
-  let meterType = '未知';
-  let meterScore = 0;
-  if (meterVal) {
-    if (meterVal.includes('獨立')) {
-      meterType = '獨立電表';
-      meterScore = 10;
-    } else if (meterVal.includes('共用')) {
-      meterType = '共用電表';
-      meterScore = -5;
-    }
-  }
-  score += meterScore;
-  breakdown.push({
-    name: '電表類型',
-    score: meterScore,
-    value: meterType,
-    type: meterScore > 0 ? 'positive' : meterScore < 0 ? 'negative' : 'neutral',
-  });
-
-  // 11. Floor & No-elevator penalty (樓層 & 電梯)
-  const floorVal = property.floor || getField(['樓層', 'floor']) || '';
-  let floorNum = 1;
-  let isBasement = false;
-  let isTopAddition = false;
-
-  const floorValLower = floorVal.toLowerCase();
-  if (floorValLower.includes('b') || floorValLower.includes('地下')) {
-    isBasement = true;
-  } else {
-    if (floorValLower.includes('頂') || floorValLower.includes('頂加') || floorValLower.includes('頂層加蓋')) {
-      isTopAddition = true;
-    }
-    const match = floorVal.match(/(-?\d+)/);
-    if (match) {
-      floorNum = parseInt(match[1], 10);
-    }
-  }
-
-  let floorScore = 0;
-  let floorDetail = floorVal || `${floorNum}樓`;
-
-  if (isBasement) {
-    floorScore = -30;
-    floorDetail = '地下室';
-  } else if (!hasElevator) {
-    if (floorNum <= 2) {
-      floorScore = 0;
-    } else if (floorNum >= 3 && floorNum <= 5) {
-      floorScore = -5;
-    } else if (floorNum >= 6) {
-      floorScore = -10;
-    }
-  }
-  score += floorScore;
-  if (floorScore !== 0 || isBasement || !hasElevator) {
-    breakdown.push({
-      name: '樓層加/扣分',
-      score: floorScore,
-      value: floorDetail + (hasElevator ? ' (有電梯)' : ' (無電梯)'),
-      type: floorScore < 0 ? 'negative' : 'neutral',
-    });
-  }
-
-  // 12. Parking & Parking Fee (停車位, 停車費)
-  const parkSpace = getField(['停車位', '車位']);
-  const parkFeeVal = getField(['停車費']);
-  let hasPark = false;
-  if (parkSpace && parkSpace.includes('室內')) {
-    const feeMatch = parkFeeVal.match(/\d+/);
-    const fee = feeMatch ? parseInt(feeMatch[0], 10) : 0;
-    if (fee === 0 || parkFeeVal.includes('免') || parkFeeVal.includes('無')) {
-      hasPark = true;
-    }
-  }
-  if (hasPark) {
-    score += 10;
-    breakdown.push({
-      name: '停車位',
-      score: 10,
-      value: '室內免費車位',
-      type: 'positive',
-    });
-  }
-
-  // 13. Balcony (陽台)
-  const hasBalcony = facilitiesList.includes('陽台') || titleLower.includes('陽台') || notesLower.includes('陽台') || titleLower.includes('露台') || titleLower.includes('露臺') || notesLower.includes('露台') || notesLower.includes('露臺');
-  if (hasBalcony) {
-    score += 8;
-    breakdown.push({
-      name: '陽台 (模型噴漆/透氣)',
-      score: 8,
-      value: '有',
-      type: 'positive',
-    });
-  } else {
-    breakdown.push({
-      name: '陽台 (模型噴漆/透氣)',
-      score: 0,
-      value: '無',
-      type: 'neutral',
-    });
-  }
-
-  // 14. Public Space (公共空間/頂樓)
-  const hasPublicSpace = titleLower.includes('頂樓') || notesLower.includes('頂樓') || notesLower.includes('公共空間') || notesLower.includes('公用空間') || notesLower.includes('露台') || notesLower.includes('露臺') || titleLower.includes('露台') || titleLower.includes('露臺') || isTopAddition;
-  if (hasPublicSpace) {
-    score += 12;
-    breakdown.push({
-      name: '公共空間 (頂樓/雜物器材存放)',
-      score: 12,
-      value: '有',
-      type: 'positive',
-    });
-  } else {
-    breakdown.push({
-      name: '公共空間 (頂樓/雜物器材存放)',
-      score: 0,
-      value: '無',
-      type: 'neutral',
-    });
-  }
-
-  // 15. Kitchen (廚房)
-  const hasKitchen = facilitiesList.includes('廚房') || facilitiesList.includes('天然瓦斯') || titleLower.includes('廚房') || titleLower.includes('開伙') || titleLower.includes('可煮') || notesLower.includes('廚房') || notesLower.includes('開伙') || notesLower.includes('天然瓦斯') || notesLower.includes('可煮');
-  if (hasKitchen) {
-    score += 10;
-    breakdown.push({
-      name: '廚房/開伙',
-      score: 10,
-      value: '有',
-      type: 'positive',
-    });
-  } else {
-    breakdown.push({
-      name: '廚房/開伙',
-      score: 0,
-      value: '無',
-      type: 'neutral',
+  
+  score += electricScore;
+  if (electricScore !== 0) {
+    breakdown.push({ 
+      name: '電表/電費', 
+      value: electricInfo, 
+      score: electricScore, 
+      type: electricScore > 0 ? 'positive' : 'negative' 
     });
   }
 
   return {
-    totalScore: Math.max(0, score),
+    totalScore: Math.round(score),
+    commuteScore,
+    spaceScore,
+    budgetScore,
+    convenienceScore,
     breakdown,
+    features: {
+      electricity: electricInfo,
+      trash: trashInfo,
+      ac: acInfo === '未知' ? '未知' : acInfo
+    },
+    notes: rental.customFields?.notes || rental.notes || ''
   };
 }

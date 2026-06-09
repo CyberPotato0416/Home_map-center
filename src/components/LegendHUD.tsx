@@ -22,7 +22,7 @@ const colorLevels = [
 ];
 
 export const LegendHUD: React.FC<LegendHUDProps> = ({ showHeatmap }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   if (!showHeatmap) return null;
 

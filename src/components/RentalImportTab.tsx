@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Building, Image as ImageIcon, Train, Navigation, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building, Image as ImageIcon, Train, Navigation, Info, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { RentalProperty } from '../types';
-import { calculateDistance, calculateWeightedScore } from '../utils';
+import { calculateDistance, calculateHomeScore } from '../utils';
 import { COMPANY_COORDS, MRT_STATIONS_DATA } from '../constants';
 
 interface RentalImportTabProps {
@@ -20,9 +20,11 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   sidebarWidth = 420,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(true);
 
   useEffect(() => {
     setCurrentImgIndex(0);
+    setIsDetailsOpen(true);
   }, [selectedRental]);
 
   const commuteData = useMemo(() => {
@@ -40,14 +42,13 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
       }
     });
 
-    const scoreResult = calculateWeightedScore(selectedRental, distToOffice, minMrtDist);
+    const score = Math.max(0, Math.round(100 - (distToOffice / 100) - (minMrtDist / 20)));
 
     return {
       distToOffice,
       nearestMrt,
       minMrtDist,
-      score: scoreResult.totalScore,
-      breakdown: scoreResult.breakdown
+      score
     };
   }, [selectedRental]);
 
@@ -63,13 +64,78 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
     return null;
   }, [selectedRental]);
 
+  const rpgData = useMemo(() => {
+    if (!selectedRental || !commuteData) return null;
+    return calculateHomeScore(selectedRental, commuteData.distToOffice, commuteData.minMrtDist);
+  }, [selectedRental, commuteData]);
+
+  let rarityColor = '#9d9d9d';
+  let rarityName = '普通';
+  let glowClass = 'shadow-[#9d9d9d]/10';
+  let borderClass = 'border-[#9d9d9d]';
+
+  if (rpgData) {
+    if (rpgData.totalScore >= 85) { rarityColor = '#ffb800'; rarityName = '傳說'; glowClass = 'shadow-[#ffb800]/20'; borderClass = 'border-[#ffb800]'; }
+    else if (rpgData.totalScore >= 75) { rarityColor = '#a335ee'; rarityName = '史詩'; glowClass = 'shadow-[#a335ee]/20'; borderClass = 'border-[#a335ee]'; }
+    else if (rpgData.totalScore >= 60) { rarityColor = '#0070dd'; rarityName = '稀有'; glowClass = 'shadow-[#0070dd]/20'; borderClass = 'border-[#0070dd]'; }
+    else if (rpgData.totalScore >= 50) { rarityColor = '#1eff00'; rarityName = '優秀'; glowClass = 'shadow-[#1eff00]/20'; borderClass = 'border-[#1eff00]'; }
+  }
+
+  const renderBlocks = (score: number, max: number = 10, color: string) => {
+    const filled = Math.round(score);
+    return (
+      <div className="flex gap-[2px] mt-1.5 h-2.5 w-full max-w-[200px]">
+        {Array.from({ length: max }).map((_, i) => (
+          <div key={i} className={`flex-1 rounded-[1px] ${i < filled ? '' : 'bg-white/10'}`} style={{ backgroundColor: i < filled ? color : undefined }} />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-4 animate-fade-in">
       {/* Selected Rental Details Section */}
-      {selectedRental ? (
-        <div className="bg-[#0f111a] border border-[#00f0ff]/30 border-l-[3px] border-l-[#00f0ff] rounded-xl p-4 shadow-lg shadow-[#00f0ff]/5 flex flex-col gap-4 animate-fade-in">
+      {selectedRental && rpgData ? (
+        <div className={`bg-[#0f111a] border border-white/5 border-l-[4px] ${borderClass} rounded-xl p-4 shadow-lg ${glowClass} flex flex-col gap-4 animate-fade-in`}>
           
-          {/* 1. Image Gallery */}
+          {/* 1. Header (Rarity & Title) */}
+          <div className="flex flex-col gap-1 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 text-[10px] font-bold font-mono rounded" style={{ backgroundColor: rarityColor, color: rarityColor === '#1eff00' || rarityColor === '#ffb800' ? '#000' : '#fff' }}>
+                {rarityName}
+              </span>
+              <span className="text-[10px] font-mono text-gray-500">
+                {selectedRental.type || '未分類'} | iLvl: {selectedRental.id}
+              </span>
+            </div>
+            <h3 className="text-[16px] font-bold text-gray-100 leading-snug" style={{ color: rarityColor }}>
+              {selectedRental.title}
+            </h3>
+            <div className="flex items-baseline gap-2 font-mono mt-1">
+              <span className="text-[#00f0ff] font-bold text-[24px] tracking-tight">
+                NT$ {selectedRental.price.toLocaleString()}
+              </span>
+              <span className="text-[12px] text-gray-500 font-normal">/ 月</span>
+            </div>
+            {(() => {
+              let displayLink = selectedRental.link || '';
+              if (displayLink.includes('.jpg') || displayLink.includes('img') || displayLink.includes('.png')) displayLink = '';
+              if (!displayLink && selectedRental.customFields?.original_591_id) {
+                displayLink = `https://rent.591.com.tw/${selectedRental.customFields.original_591_id}`;
+              }
+              if (!displayLink && selectedRental.source_591_url) {
+                displayLink = selectedRental.source_591_url;
+              }
+              
+              return displayLink ? (
+                <a href={displayLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-[11px] underline underline-offset-2 w-fit mt-1">
+                  🔗 前往 591 原始網頁
+                </a>
+              ) : null;
+            })()}
+          </div>
+
+          {/* Image Gallery */}
           <div className="space-y-1.5 relative group">
             <div className="aspect-video w-full bg-[#1e2330] rounded-lg overflow-hidden border border-white/5 relative flex items-center justify-center">
               {selectedRental.images && selectedRental.images.length > 0 ? (
@@ -78,12 +144,6 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
                     src={selectedRental.images[currentImgIndex]} 
                     alt="preview" 
                     className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity" 
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="%234b5563" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
-                      target.className = "w-1/2 h-1/2 object-contain opacity-30";
-                    }}
                   />
                   {selectedRental.images.length > 1 && (
                     <>
@@ -115,148 +175,175 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
                 </div>
               )}
             </div>
-            {selectedRental.images && selectedRental.images.length > 1 && (
-              <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-white text-[10px] px-2.5 py-1 rounded-full font-mono flex items-center gap-1 border border-white/10 pointer-events-none">
-                <ImageIcon className="w-3.5 h-3.5" />
-                <span>{currentImgIndex + 1} / {selectedRental.images.length}</span>
+          </div>
+
+          {/* 2. GIS Distances */}
+          <div className="flex items-center gap-4 text-[12px] pb-1 px-1 mt-1">
+            <div className="flex flex-col gap-1">
+              <span className="text-gray-500 flex items-center gap-1">
+                <Building className="w-3.5 h-3.5" />
+                距築本科技
+              </span>
+              <span className="font-mono text-gray-200 font-bold">
+                {commuteData.distToOffice < 1000 ? `${Math.round(commuteData.distToOffice)}m` : `${(commuteData.distToOffice / 1000).toFixed(1)}km`}
+              </span>
+            </div>
+            <div className="w-[1px] h-8 bg-white/10 shrink-0 mx-2"></div>
+            <div className="flex flex-col gap-1">
+              <span className="text-gray-500 flex items-center gap-1">
+                <Train className="w-3.5 h-3.5" />最近捷運站
+              </span>
+              <span className="font-mono text-gray-200 font-bold">
+                {commuteData.nearestMrt || '未知'} <span className="text-gray-500 font-normal text-[10px]">({Math.round(commuteData.minMrtDist)}m)</span>
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Score & Notes */}
+          <div className="flex items-center gap-4 bg-black/40 p-3 rounded-lg border border-white/5">
+            <div className="flex flex-col items-center justify-center shrink-0">
+              <span className="text-[12px] text-gray-400 font-bold mb-[-4px]">戰鬥力</span>
+              <span className="text-[40px] font-mono font-bold tracking-tighter" style={{ color: rarityColor }}>
+                {rpgData.totalScore}
+              </span>
+            </div>
+            <div className="flex flex-col h-full border-l border-white/10 pl-4 w-full">
+              <span className="text-[11px] text-gray-500 mb-1">備註欄位</span>
+              <p className="text-[13px] text-gray-300 font-mono italic leading-relaxed break-all line-clamp-3">
+                {rpgData.notes ? `"${rpgData.notes}"` : "待審核"}
+              </p>
+            </div>
+          </div>
+
+          {/* 4. Core Stats Progress Bars */}
+          <div className="pt-2">
+            <h4 className="text-[12px] font-bold text-gray-400 mb-3 border-b border-white/10 pb-1">【基礎性能分析】</h4>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex flex-col">
+                <div className="flex justify-between items-end text-[12px] font-mono">
+                  <span className="text-gray-300">通勤力</span>
+                  <span className="text-gray-400 text-[10px]">{rpgData.commuteScore.toFixed(1)}/10 (直線 {Math.round(commuteData?.distToOffice || 0)}m)</span>
+                </div>
+                {renderBlocks(rpgData.commuteScore, 10, rarityColor)}
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex justify-between items-end text-[12px] font-mono">
+                  <span className="text-gray-300">空間力</span>
+                  <span className="text-gray-400 text-[10px]">{rpgData.spaceScore.toFixed(1)}/10 ({pingValue ? `${pingValue} 坪` : '未知'})</span>
+                </div>
+                {renderBlocks(rpgData.spaceScore, 10, rarityColor)}
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex justify-between items-end text-[12px] font-mono">
+                  <span className="text-gray-300">預算力</span>
+                  <span className="text-gray-400 text-[10px]">{rpgData.budgetScore.toFixed(1)}/10 (${selectedRental.price.toLocaleString()})</span>
+                </div>
+                {renderBlocks(rpgData.budgetScore, 10, rarityColor)}
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex justify-between items-end text-[12px] font-mono">
+                  <span className="text-gray-300">便利力</span>
+                  <span className="text-gray-400 text-[10px]">{rpgData.convenienceScore.toFixed(1)}/10 ({selectedRental.floor || '未知樓層'})</span>
+                </div>
+                {renderBlocks(rpgData.convenienceScore, 10, rarityColor)}
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Secondary Attributes */}
+          <div className="pt-2">
+            <h4 className="text-[12px] font-bold text-gray-400 mb-3 border-b border-white/10 pb-1">【附加裝備數值】</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px]">
+              <div className="flex items-center gap-2 text-gray-300">
+                <span className="w-5 flex justify-center">⚡</span>
+                <span className="font-mono">能源負載: {rpgData.features.electricity}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-300">
+                <span className="w-5 flex justify-center">🗑️</span>
+                <span className="font-mono">後勤維護: {rpgData.features.trash}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-300">
+                <span className="w-5 flex justify-center">❄️</span>
+                <span className="font-mono">環境溫控: {rpgData.features.ac}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Buffs & Debuffs Detail Breakdown */}
+          <div className="pt-2">
+            <button 
+              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+              className="w-full flex items-center justify-between text-[12px] font-bold text-gray-400 mb-2 border-b border-white/10 pb-1 hover:text-gray-300 transition-colors"
+            >
+              <span>【評分與扣分明細】</span>
+              {isDetailsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+            
+            {isDetailsOpen && (
+              <div className="flex flex-col gap-1.5 pr-1 -mr-2">
+                {rpgData.breakdown.map((item, i) => (
+                  <div key={i} className={`flex justify-between items-center px-2.5 py-1.5 rounded-lg text-[11px] font-mono border ${
+                    item.type === 'positive' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                    item.type === 'negative' ? 'bg-[#ff3860]/10 text-[#ff3860] border-[#ff3860]/20' :
+                    'bg-gray-800 text-gray-400 border-gray-700'
+                  }`}>
+                    <span className="flex items-center gap-1.5 font-bold">
+                      {item.type === 'positive' && <span className="opacity-80">✦</span>}
+                      {item.type === 'negative' && <span className="opacity-80 text-[10px] mt-[1px]">💀</span>}
+                      {item.name} <span className="opacity-60 text-[10px] font-normal">({item.value})</span>
+                    </span>
+                    <span className="font-bold text-[12px]">{item.score > 0 ? `+${item.score}` : item.score}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          {/* 2. Core Metrics & Title */}
-          <div>
-            <div className="text-[10px] font-mono text-gray-500 mb-1 flex items-center justify-between">
-              <span>{selectedRental.id}</span>
-              {selectedRental.link && (
-                <a href={selectedRental.link} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[#00f0ff]/70 hover:text-[#00f0ff] transition-colors">
-                  🔗 前往 591 原始網頁
-                </a>
-              )}
-            </div>
-            <h3 className="text-sm font-bold text-gray-100 leading-snug mb-2">{selectedRental.title}</h3>
-            
-            <div className="flex items-baseline gap-2 text-xs font-mono">
-              <span className="text-[#00f0ff] font-bold text-xl tracking-tight">
-                NT$ {selectedRental.price.toLocaleString()}
-              </span>
-              <span className="text-[11px] text-gray-500 font-normal">/ 月</span>
-            </div>
-          </div>
-
-          {/* 3. GIS Analytics Badge */}
-          {commuteData && (
-            <div className="bg-[#161a25] border border-white/5 rounded-lg p-3 flex flex-col gap-2.5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[#00f0ff]/5 rounded-full blur-2xl -mt-10 -mr-10 pointer-events-none"></div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
-                  <Navigation className="w-3 h-3 text-[#00f0ff]" />
-                  GIS 通勤與決策指標
-                </span>
-                <div className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 ${commuteData.score >= 80 ? 'bg-emerald-500/20 text-emerald-400' : commuteData.score >= 60 ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-400'}`}>
-                  SCORE {commuteData.score}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <div className="flex flex-col gap-1 text-[11px]">
-                  <span className="text-gray-500 flex items-center gap-1">
-                    <Building className="w-3 h-3" />
-                    距築本科技
-                  </span>
-                  <span className="font-mono text-gray-200">
-                    {commuteData.distToOffice < 1000 ? `${Math.round(commuteData.distToOffice)}m` : `${(commuteData.distToOffice / 1000).toFixed(1)}km`}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 text-[11px]">
-                  <span className="text-gray-500 flex items-center gap-1">
-                    <Train className="w-3 h-3" />
-                    最近捷運站
-                  </span>
-                  <span className="font-mono text-gray-200">
-                    {commuteData.nearestMrt} <span className="text-gray-500">({Math.round(commuteData.minMrtDist)}m)</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Score breakdown detailed checklist */}
-              {commuteData.breakdown && commuteData.breakdown.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-white/5 space-y-1">
-                  <div className="text-[9px] font-bold text-gray-500 tracking-wider uppercase mb-1">評分與扣分明細</div>
-                  <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto pr-1">
-                    {commuteData.breakdown.map((item, idx) => {
-                      const scoreText = item.score > 0 ? `+${item.score}` : `${item.score}`;
-                      const colorClass = item.type === 'positive' ? 'text-emerald-400 bg-emerald-500/5 border border-emerald-500/10' : 
-                                         item.type === 'negative' ? 'text-red-400 bg-red-500/5 border border-red-500/10' : 
-                                         'text-gray-400 bg-gray-500/5 border border-gray-500/10';
-                      return (
-                        <div key={idx} className={`flex items-center justify-between text-[10px] px-2 py-1 rounded ${colorClass}`}>
-                          <span className="font-medium">{item.name} <span className="opacity-60 font-mono text-[9px]">({item.value})</span></span>
-                          <span className="font-mono font-bold">{scoreText}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 4. Pros/Cons Tags */}
-          {(selectedRental.pros.length > 0 || selectedRental.cons.length > 0) && (
-            <div className="flex flex-col gap-1.5 pt-1">
-              {selectedRental.pros.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedRental.pros.map((pro, i) => (
-                    <span key={i} className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                      + {pro}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {selectedRental.cons.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedRental.cons.map((con, i) => (
-                    <span key={i} className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                      − {con}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 5. Dynamic Custom Attributes Grid */}
-          <div className="pt-3 border-t border-white/5">
-            <h4 className="text-[20px] font-bold text-gray-400 mb-2 flex items-center gap-1">
-              <Info className="w-5 h-5" /> 附加屬性
+          {/* 7. Dynamic Custom Attributes Grid */}
+          <div className="pt-3">
+            <h4 className="text-[12px] font-bold text-gray-400 mb-3 border-b border-white/10 pb-1 flex items-center gap-1">
+              <Info className="w-3.5 h-3.5" /> 附加屬性
             </h4>
-            <div className={`grid gap-x-3 gap-y-3 ${
+            <div className={`grid gap-x-2 gap-y-3 ${
               sidebarWidth >= 840 ? 'grid-cols-4' : sidebarWidth >= 630 ? 'grid-cols-3' : 'grid-cols-2'
             }`}>
               {pingValue !== null && (
                 <div className="flex flex-col">
-                  <span className="text-[20px] text-gray-500 font-medium">單坪租金</span>
-                  <span className="text-[24px] text-[#00f0ff] font-mono font-bold tracking-tight">
-                    ${Math.round(selectedRental.price / pingValue).toLocaleString()} <span className="text-[20px] font-normal text-gray-500">/坪</span>
+                  <span className="text-[10px] text-gray-500 font-medium mb-0.5">size_ping (坪數)</span>
+                  <span className="text-[12px] text-gray-200 font-mono tracking-tight">
+                    {pingValue}
                   </span>
                 </div>
               )}
               
+              {selectedRental.floor && (
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-500 font-medium mb-0.5">floor (樓層)</span>
+                  <span className="text-[12px] text-gray-200 font-mono tracking-tight">
+                    {selectedRental.floor}
+                  </span>
+                </div>
+              )}
+
               {Object.entries(selectedRental.customFields).map(([key, value], i) => {
                 const lowerKey = key.toLowerCase();
-                const isFullWidth = ['地址', 'address', '家具', '設備', 'facilities', 'furniture', '提供設備'].some(k => lowerKey.includes(k));
+                if (lowerKey === 'floor' || lowerKey === 'size_ping') return null; // Avoid duplicating if already displayed
+
+                const isFullWidth = ['地址', 'address', '家具', '設備', 'facilities', 'furniture', '提供設備', 'created_at', 'created'].some(k => lowerKey.includes(k));
                 
                 return (
                   <div key={i} className={`flex flex-col ${isFullWidth ? 'col-span-full' : ''}`}>
-                    <span className="text-[20px] text-gray-500 font-medium truncate" title={key}>{key}</span>
-                    <span className={`text-[15px] text-gray-200 font-mono ${isFullWidth ? 'break-words whitespace-normal' : 'truncate'}`} title={String(value || '-')}>{value || '-'}</span>
+                    <span className="text-[10px] text-gray-500 font-medium truncate mb-0.5" title={key}>{key}</span>
+                    <span className={`text-[12px] text-gray-200 font-mono ${isFullWidth ? 'break-words whitespace-normal leading-relaxed' : 'truncate'}`} title={String(value || '-')}>{value || '-'}</span>
                   </div>
                 );
               })}
 
-              {Object.keys(selectedRental.customFields).length === 0 && pingValue === null && (
-                 <div className="col-span-full text-[20px] text-gray-600 font-mono italic">無其他自訂屬性</div>
+              {Object.keys(selectedRental.customFields).length === 0 && pingValue === null && !selectedRental.floor && (
+                 <div className="col-span-full text-[11px] text-gray-600 font-mono italic">無其他自訂屬性</div>
               )}
             </div>
           </div>
@@ -265,7 +352,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
       ) : (
         <div className="flex flex-col items-center justify-center p-8 bg-gray-900/30 rounded-xl border border-white/5 border-dashed">
           <Building className="w-8 h-8 text-gray-700 mb-2" />
-          <span className="text-xs text-gray-500">點擊地圖上的物件以查看詳細資料</span>
+          <span className="text-xs text-gray-500">點擊地圖上的物件以查看武器裝備屬性卡</span>
         </div>
       )}
     </div>
