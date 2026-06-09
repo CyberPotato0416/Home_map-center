@@ -307,36 +307,11 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
     return row_data
 
 
-def process_urls(urls, csv_path, log_func=print, finish_callback=None):
+def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mode=False, confirm_func=None, auto_confirm=False):
     """批次執行擷取流程，並寫入 CSV"""
     log_func("建立 591 安全 Session 中...")
     opener, token = get_591_session()
     
-    extracted_rows = []
-    success_count = 0
-    
-    log_func(f"開始分析，共 {len(urls)} 筆...")
-    for idx, url_item in enumerate(urls, 1):
-        house_id = extract_591_id(url_item)
-        if not house_id:
-            log_func(f"[{idx}/{len(urls)}] ❌ 無法解析物件 ID: {url_item}")
-            continue
-            
-        log_func(f"[{idx}/{len(urls)}] 🚀 正在分析物件 ID: {house_id}...")
-        try:
-            row = fetch_rental_details(opener, token, house_id, csv_path, log_func)
-            extracted_rows.append(row)
-            success_count += 1
-            log_func(f"  ✅ 擷取成功: {row['title']}")
-        except Exception as e:
-            log_func(f"  ❌ 擷取失敗! 錯誤原因: {e}")
-            
-    if not extracted_rows:
-        log_func("\n⚠️ 本次任務沒有任何資料成功寫入。")
-        if finish_callback:
-            finish_callback(0)
-        return
-        
     file_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
     fieldnames = [
         "id", "title", "price", "size_ping", "floor", "type", "address", 
@@ -347,53 +322,122 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None):
         "created_at"
     ]
     
-    # 讀取既有 CSV 中已記錄的 591 ID，避免重複寫入同一筆物件
-    existing_ids = set()
+    # 讀取既有 CSV 中的所有物件
+    existing_rows = []
+    id_to_row = {}
     if file_exists:
         try:
             with open(csv_path, "r", newline='', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
                 for existing_row in reader:
-                    eid = existing_row.get("original_591_id", "").strip()
+                    row_dict = dict(existing_row)
+                    existing_rows.append(row_dict)
+                    eid = row_dict.get("original_591_id", "").strip()
                     if eid:
-                        existing_ids.add(eid)
+                        id_to_row[eid] = row_dict
         except Exception as e:
-            log_func(f"  [提示] 讀取既有 CSV 失敗，將直接追加: {e}")
+            log_func(f"  [提示] 讀取既有 CSV 失敗: {e}")
 
-    # 過濾掉已存在的物件
-    new_rows = []
-    for row in extracted_rows:
-        rid = str(row.get("original_591_id", ""))
-        if rid in existing_ids:
-            log_func(f"  ⏭️  略過重複物件 ID: {rid}（已存在 CSV 中）")
+    success_count = 0
+    skip_count = 0
+    any_changed = False
+    
+    log_func(f"開始分析，共 {len(urls)} 筆... (更新模式: {'開啟' if update_mode else '關閉'})")
+    for idx, url_item in enumerate(urls, 1):
+        house_id = extract_591_id(url_item)
+        if not house_id:
+            log_func(f"[{idx}/{len(urls)}] ❌ 無法解析物件 ID: {url_item}")
+            continue
+            
+        # 1. 如果是更新模式
+        if update_mode:
+            if house_id not in id_to_row:
+                log_func(f"[{idx}/{len(urls)}] ⏭️ 略過物件 ID: {house_id}（更新模式下只會更新已存在的物件）")
+                skip_count += 1
+                continue
+                
+            old_row = id_to_row[house_id]
+            log_func(f"[{idx}/{len(urls)}] 🚀 正在獲取最新資料，物件 ID: {house_id}...")
+            try:
+                new_row = fetch_rental_details(opener, token, house_id, csv_path, log_func)
+                
+                # 詢問使用者是否更新
+                confirmed = False
+                if auto_confirm:
+                    confirmed = True
+                elif confirm_func:
+                    confirmed = confirm_func(old_row.get("title", "無名稱"), new_row.get("title", "無名稱"), house_id)
+                else:
+                    ans = input(f"找到已存在物件 '{old_row.get('title')}'，是否確認更新？(y/N): ").strip().lower()
+                    confirmed = ans in ['y', 'yes']
+                    
+                if confirmed:
+                    log_func(f"  📥 使用者同意更新，正在合併資料並寫入...")
+                    # 保留原 ID 與建立時間
+                    new_row["id"] = old_row["id"]
+                    new_row["created_at"] = old_row.get("created_at", new_row["created_at"])
+                    
+                    # 合併其他手動編輯欄位 (當最新抓取值為 "不詳" / "" 且既有值有效時保留既有值)
+                    for key in new_row:
+                        new_val = new_row[key]
+                        old_val = old_row.get(key)
+                        if new_val in ["不詳", "", None] and old_val not in ["不詳", "", None]:
+                            new_row[key] = old_val
+                            
+                    # 合併設施欄位 (聯集)
+                    new_facs = [f.strip() for f in new_row.get("facilities", "").split(";") if f.strip()]
+                    old_facs = [f.strip() for f in old_row.get("facilities", "").split(";") if f.strip()]
+                    merged_facs = list(dict.fromkeys(new_facs + old_facs))
+                    new_row["facilities"] = ";".join(merged_facs)
+                    
+                    # 更新記憶體中的資料
+                    old_row.update(new_row)
+                    any_changed = True
+                    success_count += 1
+                    log_func(f"  ✅ 更新成功: {old_row['title']}")
+                else:
+                    log_func(f"  ⏭️ 使用者取消更新物件 ID: {house_id}")
+                    skip_count += 1
+            except Exception as e:
+                log_func(f"  ❌ 擷取/更新失敗! 錯誤原因: {e}")
+                
+        # 2. 如果是普通新增模式
         else:
-            new_rows.append(row)
-            existing_ids.add(rid)
-
-    if not new_rows:
-        log_func("\n⚠️ 所有物件皆已存在 CSV 中，本次無新增資料。")
+            if house_id in id_to_row:
+                log_func(f"[{idx}/{len(urls)}] ⏭️ 略過重複物件 ID: {house_id}（已存在 CSV 中）")
+                skip_count += 1
+                continue
+                
+            log_func(f"[{idx}/{len(urls)}] 🚀 正在分析新物件 ID: {house_id}...")
+            try:
+                new_row = fetch_rental_details(opener, token, house_id, csv_path, log_func)
+                existing_rows.append(new_row)
+                id_to_row[house_id] = new_row
+                any_changed = True
+                success_count += 1
+                log_func(f"  ✅ 擷取成功: {new_row['title']}")
+            except Exception as e:
+                log_func(f"  ❌ 擷取失敗! 錯誤原因: {e}")
+                
+    if not any_changed:
+        log_func("\n⚠️ 本次任務沒有任何資料變更。")
         if finish_callback:
             finish_callback(0)
         return
-
-    log_func(f"\n💾 正在追加寫入 CSV 檔案 (+{len(new_rows)} 筆): {csv_path} ...")
+        
+    log_func(f"\n💾 正在寫入 CSV 檔案: {csv_path} ...")
     try:
-        if file_exists:
-            # 🔑 追加模式：使用普通 utf-8（不加 BOM），否則會在檔案中間插入 BOM 字元損毀 CSV
-            with open(csv_path, 'a', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                for row in new_rows:
-                    writer.writerow(row)
-        else:
-            # 🔑 新建模式：使用 utf-8-sig（開頭加 BOM），讓 Excel 雙擊開啟時中文不亂碼
-            os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-            with open(csv_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-                for row in new_rows:
-                    writer.writerow(row)
-        log_func("  💾 CSV 追加寫入成功！")
-        log_func(f"\n🎉 任務結束！新增 {len(new_rows)} 筆，略過 {len(extracted_rows) - len(new_rows)} 筆重複物件。")
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        # 🔑 一律重新寫入整個檔案，使用 utf-8-sig 確保 Excel 中文不亂碼
+        with open(csv_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in existing_rows:
+                # 只寫入 fieldnames 中有的欄位，防範未來欄位有髒資料
+                row_to_write = {k: row.get(k, "") for k in fieldnames}
+                writer.writerow(row_to_write)
+        log_func("  💾 CSV 檔案更新完成！")
+        log_func(f"\n🎉 任務結束！成功變更 {success_count} 筆，略過 {skip_count} 筆物件。")
         if finish_callback:
             finish_callback(success_count)
     except Exception as e:
@@ -459,8 +503,13 @@ class AppGUI:
         btn_frame = ttk.Frame(self.root, padding="10")
         btn_frame.pack(fill=tk.X, padx=5)
         
+        # 新增更新模式 Checkbutton
+        self.update_mode_var = tk.BooleanVar(value=False)
+        self.update_mode_cb = ttk.Checkbutton(btn_frame, text="更新模式 (僅更新已存在物件，防蓋錯)", variable=self.update_mode_var)
+        self.update_mode_cb.pack(side=tk.LEFT, padx=(10, 15))
+        
         self.start_btn = ttk.Button(btn_frame, text="🚀 開始下載並歸檔", command=self.start_processing)
-        self.start_btn.pack(side=tk.LEFT, padx=(10, 5), ipadx=10, ipady=3)
+        self.start_btn.pack(side=tk.LEFT, padx=5, ipadx=10, ipady=3)
         
         self.open_csv_btn = ttk.Button(btn_frame, text="📂 開啟 CSV 檔案 (Excel)", command=self.open_csv)
         self.open_csv_btn.pack(side=tk.LEFT, padx=5, ipady=3)
@@ -518,6 +567,22 @@ class AppGUI:
         except Exception as e:
             messagebox.showerror("錯誤", f"無法開啟照片夾: {e}")
             
+    def confirm_update(self, old_title, new_title, original_id):
+        """執行緒安全的 UI 更新確認視窗"""
+        res = [False]
+        event = threading.Event()
+        def ask():
+            msg = f"找到已存在於 CSV 中的物件：\n\n" \
+                  f"【既有名稱】: {old_title}\n" \
+                  f"【最新名稱】: {new_title}\n" \
+                  f"【物件 ID】: {original_id}\n\n" \
+                  f"確定要更新此物件資料（將保留原 ID 及手動編輯欄位，僅更新 591 資訊）嗎？"
+            res[0] = messagebox.askyesno("確認更新物件", msg, parent=self.root)
+            event.set()
+        self.root.after(0, ask)
+        event.wait()
+        return res[0]
+
     def start_processing(self):
         # 讀取輸入的網址
         input_content = self.text_input.get("1.0", tk.END).strip()
@@ -534,10 +599,12 @@ class AppGUI:
         self.log_text.delete("1.0", tk.END)
         self.log_text.config(state=tk.DISABLED)
         
+        update_mode = self.update_mode_var.get()
+        
         # 開啟背景執行緒進行下載，防止 UI 凍結
         thread = threading.Thread(
             target=process_urls,
-            args=(urls, csv_file, self.log, self.on_finish)
+            args=(urls, csv_file, self.log, self.on_finish, update_mode, self.confirm_update)
         )
         thread.daemon = True
         thread.start()
@@ -557,10 +624,16 @@ class AppGUI:
 
 def cli_main():
     """命令列 CLI 運作主流程"""
-    urls = sys.argv[1:]
+    import argparse
+    parser = argparse.ArgumentParser(description="591 租屋資料下載歸檔工具 (CLI)")
+    parser.add_argument("urls", nargs="+", help="591 物件網址或 ID")
+    parser.add_argument("--update", action="store_true", help="開啟更新模式 (僅更新 CSV 已存在物件)")
+    parser.add_argument("--yes", "-y", action="store_true", help="自動確認更新，不進行提示詢問")
+    args = parser.parse_args()
+    
     csv_file = DEFAULT_CSV
     print("====== 591 租屋資料下載歸檔工具 (CLI 模式) ======")
-    process_urls(urls, csv_file, print)
+    process_urls(args.urls, csv_file, print, update_mode=args.update, auto_confirm=args.yes)
 
 
 if __name__ == "__main__":
