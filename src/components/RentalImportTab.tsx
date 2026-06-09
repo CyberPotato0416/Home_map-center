@@ -180,6 +180,48 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
             </div>
           )}
 
+          {/* 3.5. Contact Person Information */}
+          {(selectedRental.customFields['聯絡人'] || selectedRental.customFields['聯絡電話'] || selectedRental.customFields['Line聯絡']) && (
+            <div className="bg-[#121620]/80 border border-purple-500/20 rounded-lg p-3 flex flex-col gap-2 relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
+                <span className="text-[10px] font-bold text-purple-400 flex items-center gap-1">
+                  👤 聯絡人資訊 (Contact)
+                </span>
+                {selectedRental.customFields['聯絡人身分'] && (
+                  <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-bold">
+                    {selectedRental.customFields['聯絡人身分']}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5 text-xs">
+                {selectedRental.customFields['聯絡人'] && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">聯絡人</span>
+                    <span className="font-semibold text-gray-200">{selectedRental.customFields['聯絡人']}</span>
+                  </div>
+                )}
+                {selectedRental.customFields['聯絡電話'] && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">電話 / 手機</span>
+                    <span className="font-mono font-semibold text-cyan-400 select-all">{selectedRental.customFields['聯絡電話']}</span>
+                  </div>
+                )}
+                {selectedRental.customFields['Line聯絡'] && (
+                  <div className="flex items-center justify-between mt-0.5">
+                    <span className="text-gray-500">Line 聯絡</span>
+                    {selectedRental.customFields['Line聯絡'].startsWith('http') ? (
+                      <a href={selectedRental.customFields['Line聯絡']} target="_blank" rel="noreferrer" className="text-emerald-400 hover:text-emerald-300 underline font-semibold flex items-center gap-0.5">
+                        💬 點擊加入 LINE
+                      </a>
+                    ) : (
+                      <span className="font-mono text-emerald-400 select-all">{selectedRental.customFields['Line聯絡']}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* 4. Pros/Cons Tags */}
           {(selectedRental.pros.length > 0 || selectedRental.cons.length > 0) && (
             <div className="flex flex-col gap-1.5 pt-1">
