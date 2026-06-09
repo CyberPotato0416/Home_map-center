@@ -87,19 +87,10 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
   };
 
   // 1. Commute Distance to Office
-  // 0~1km: 以 0.5km 為間隔，每多 0.5km 扣 1 分（最高 10 分）
-  // 1~2km: -10 分（需要騎車但還算可接受）
-  // >2km: -25 分（通勤明顯不便）
-  let commuteDistScore: number;
+  // 線性評分：每增加 0.5km 扣 1 分，從 10 分起算
+  // 0km=10, 0.5km=9, 1km=8, 1.5km=7, 2km=6, 2.5km=5 ...（可為負分）
   const distKm = distToOfficeMeters / 1000;
-  if (distToOfficeMeters <= 1000) {
-    // 0~1km: 10分基礎，每多 0.5km 扣 1 分
-    commuteDistScore = Math.max(0, 10 - Math.floor(distKm / 0.5));
-  } else if (distToOfficeMeters < 2000) {
-    commuteDistScore = -10;
-  } else {
-    commuteDistScore = -25;
-  }
+  const commuteDistScore = 10 - Math.floor(distKm / 0.5);
   score += commuteDistScore;
   breakdown.push({
     name: '距公司距離',
