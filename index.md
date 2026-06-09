@@ -57,10 +57,15 @@
 | **P** | `facilities` | 🔄 **自動換行 (寬度 80)** | 房屋配備設施列表 |
 | **Q** | `created_at` | 🚫 **隱藏 (Hidden)** | 資料建立時間戳 |
 
+### ⚠️ CSV 寫入與更新原則
+1. **禁止直接覆寫**：本 CSV 檔案儲存了重要的歷史備份資料。任何指令碼或工具**絕對禁止清空或整檔重寫**。
+2. **僅限尾端追加 (Append-Only)**：新爬取或手動輸入的租屋資料，**必須一律從檔案最尾端 (EOF) 新增**。如果是既有物件的更新，應進行 ID 比對更新（Upsert），不得破壞其他歷史資料列。
+
 ---
 
 ## 🛠️ 地端輔助工具
 
 *   **[extract_591_to_csv.py](file:///H:/645_Home_map-center/extract_591_to_csv.py)**：591 租屋資訊擷取與 CSV 轉檔工具。
 *   **[extract_pdf.py](file:///H:/645_Home_map-center/extract_pdf.py)**：PDF 資料抽取解析工具。
+
 

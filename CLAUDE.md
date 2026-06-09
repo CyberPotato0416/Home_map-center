@@ -75,3 +75,8 @@ Any Skill body whose steps omit a deduction, inclusion, or multiplier present in
 User's implicit expectation of a "quick answer" when the correct path requires reading a spec
 Rule of thumb: If a domain/*.md file exists for this topic, its algorithm is the algorithm. Your analytical intuition does not get a vote.
 
+規範 4：CSV 資料更新原則 (Append-Only / Do Not Overwrite)
+- 核心原則：本地端的 `public/rentals_import.csv` 保存了寶貴的歷史租屋紀錄（包含已失效的 591 網址備份）。
+- 寫入規範：當需要透過 Python 腳本或程式碼更新該 CSV 時，**必須只能從檔案最後一行追加（Append）新資料**，或者進行 ID 比對更新（Upsert），**絕對禁止直接覆寫、清空或洗掉整個 CSV 的歷史資料**。
+
+
