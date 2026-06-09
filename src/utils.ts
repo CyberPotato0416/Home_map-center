@@ -86,29 +86,41 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
     return isNaN(num) ? null : num;
   };
 
-  // 1. Commute
-  const commuteScore = Math.max(0, Math.min(10, 10 - distToOfficeMeters / 300));
-  let commuteDistScore = distToOfficeMeters < 1000 ? 5 : distToOfficeMeters < 2000 ? -10 : -25;
-  if (distToOfficeMeters < 600) commuteDistScore = 15;
+  // 1. Commute Distance to Office
+  // 0~1km: 以 0.5km 為間隔，每多 0.5km 扣 1 分（最高 10 分）
+  // 1~2km: -10 分（需要騎車但還算可接受）
+  // >2km: -25 分（通勤明顯不便）
+  let commuteDistScore: number;
+  const distKm = distToOfficeMeters / 1000;
+  if (distToOfficeMeters <= 1000) {
+    // 0~1km: 10分基礎，每多 0.5km 扣 1 分
+    commuteDistScore = Math.max(0, 10 - Math.floor(distKm / 0.5));
+  } else if (distToOfficeMeters < 2000) {
+    commuteDistScore = -10;
+  } else {
+    commuteDistScore = -25;
+  }
   score += commuteDistScore;
   breakdown.push({
     name: '距公司距離',
-    value: distToOfficeMeters < 1000 ? `${Math.round(distToOfficeMeters)}m` : `${(distToOfficeMeters / 1000).toFixed(1)}km`,
+    value: distToOfficeMeters < 1000 ? `${Math.round(distToOfficeMeters)}m` : `${distKm.toFixed(1)}km`,
     score: commuteDistScore,
     type: commuteDistScore > 0 ? 'positive' : commuteDistScore < 0 ? 'negative' : 'neutral'
   });
 
   // MRT Dist
+  // ≤300m: 可直接步行，+10 分
+  // 300~1000m: 可用 YouBike 或騎車，+5 分
+  // >1000m: 幾乎需要騎車找車位，0 分（不加分）
   let mrtScore = 0;
   if (minMrtDist > 0) {
-    if (minMrtDist <= 500) mrtScore = 10;
-    else if (minMrtDist <= 800) mrtScore = 5;
-    else if (minMrtDist <= 1200) mrtScore = -5;
-    else mrtScore = -15;
+    if (minMrtDist <= 300) mrtScore = 10;
+    else if (minMrtDist <= 1000) mrtScore = 5;
+    else mrtScore = 0;
     score += mrtScore;
     breakdown.push({
       name: '捷運站距離',
-      value: `${Math.round(minMrtDist)}m`,
+      value: minMrtDist < 1000 ? `${Math.round(minMrtDist)}m` : `${(minMrtDist / 1000).toFixed(1)}km`,
       score: mrtScore,
       type: mrtScore > 0 ? 'positive' : mrtScore < 0 ? 'negative' : 'neutral'
     });
