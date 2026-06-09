@@ -286,6 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             setRentals={setRentals}
             selectedRental={selectedRental}
             setSelectedRental={setSelectedRental}
+            sidebarWidth={sidebarWidth}
           />
         )}
 

@@ -82,7 +82,7 @@ function getMrtLinesForStation(stationName: string): string[] {
 
 export default function App() {
   // State variables for analytics and interaction
-  const [radius, setRadius] = useState<number>(25); // Radius in kilometers (default 25)
+  const [radius, setRadius] = useState<number>(5); // Radius in kilometers (default 5)
   const [showCircle, setShowCircle] = useState<boolean>(true); // Toggle circle visibility
   const [zoomLevel, setZoomLevel] = useState<number>(11); // Initial map zoom state
   const [mapCenterPos, setMapCenterPos] = useState<{ lat: number; lng: number }>({ lat: 25.0617, lng: 121.5435 }); // Track current center
@@ -110,7 +110,7 @@ export default function App() {
   const [selectedRental, setSelectedRental] = useState<RentalProperty | null>(null);
   const [maxBudget, setMaxBudget] = useState<number>(18000);
   const [minSize, setMinSize] = useState<number>(5);
-  const [maxDistance, setMaxDistance] = useState<number>(25);
+  const [maxDistance, setMaxDistance] = useState<number>(5);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
   // Sub-window tabs state (1 = 地圖控制, 2 = 租金熱圖, 3 = 捷運通勤)
@@ -118,19 +118,14 @@ export default function App() {
   const [sidebarWidth, setSidebarWidth] = useState<number>(420);
   const [isSidebarDragging, setIsSidebarDragging] = useState<boolean>(false);
 
-  // Load rentals from localStorage on mount and exclude test objects
+  // Load rentals from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('my_rental_pins');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((r: any) => r && r.id && !String(r.id).startsWith('rental-'));
-          setRentals(cleaned);
-          if (cleaned.length !== parsed.length) {
-            localStorage.setItem('my_rental_pins', JSON.stringify(cleaned));
-            console.log(`[Persistence] Filtered out ${parsed.length - cleaned.length} test objects from localStorage.`);
-          }
+          setRentals(parsed);
         }
       } catch (e) {
         console.error("Failed to parse saved rentals", e);

@@ -131,20 +131,41 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           if (parsedRentals.length > 0) {
             setRentals(prevRentals => {
               const updatedRentals = [...prevRentals];
+              let newlyAdded = 0;
+              let updatedCount = 0;
+              let deletedCount = 0;
+
               parsedRentals.forEach(newRental => {
                 const existingIndex = updatedRentals.findIndex(
                   r => r.id === newRental.id || (r.link && r.link === newRental.link) || (r.lat === newRental.lat && r.lng === newRental.lng)
                 );
-                if (existingIndex >= 0) {
-                  updatedRentals[existingIndex] = newRental; // Update existing
+                
+                if (newRental.price === 0) {
+                  // Price 0 means we should hide/delete this rental
+                  if (existingIndex >= 0) {
+                    updatedRentals.splice(existingIndex, 1);
+                    deletedCount++;
+                  }
                 } else {
-                  updatedRentals.push(newRental); // Add new
+                  if (existingIndex >= 0) {
+                    updatedRentals[existingIndex] = newRental; // Update existing
+                    updatedCount++;
+                  } else {
+                    updatedRentals.push(newRental); // Add new
+                    newlyAdded++;
+                  }
                 }
               });
               
               // Persist locally
               localStorage.setItem('my_rental_pins', JSON.stringify(updatedRentals));
-              alert(`成功匯入並更新 ${updatedRentals.length} 筆物件資料！(新增 ${updatedRentals.length - prevRentals.length} 筆)`);
+              
+              let msg = `成功匯入！目前共有 ${updatedRentals.length} 筆物件。\n`;
+              if (newlyAdded > 0) msg += `- 新增: ${newlyAdded} 筆\n`;
+              if (updatedCount > 0) msg += `- 更新: ${updatedCount} 筆\n`;
+              if (deletedCount > 0) msg += `- 刪除 (因租金為0): ${deletedCount} 筆\n`;
+              
+              alert(msg);
               return updatedRentals;
             });
           } else {

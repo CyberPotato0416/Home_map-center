@@ -9,6 +9,7 @@ interface RentalImportTabProps {
   setRentals: (r: RentalProperty[]) => void;
   selectedRental: RentalProperty | null;
   setSelectedRental: (r: RentalProperty | null) => void;
+  sidebarWidth?: number;
 }
 
 export const RentalImportTab: React.FC<RentalImportTabProps> = ({
@@ -16,6 +17,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   setRentals,
   selectedRental,
   setSelectedRental,
+  sidebarWidth = 420,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
@@ -204,28 +206,35 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
 
           {/* 5. Dynamic Custom Attributes Grid */}
           <div className="pt-3 border-t border-white/5">
-            <h4 className="text-[10px] font-bold text-gray-400 mb-2 flex items-center gap-1">
-              <Info className="w-3 h-3" /> 附加屬性
+            <h4 className="text-[20px] font-bold text-gray-400 mb-2 flex items-center gap-1">
+              <Info className="w-5 h-5" /> 附加屬性
             </h4>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+            <div className={`grid gap-x-3 gap-y-3 ${
+              sidebarWidth >= 840 ? 'grid-cols-4' : sidebarWidth >= 630 ? 'grid-cols-3' : 'grid-cols-2'
+            }`}>
               {pingValue !== null && (
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-gray-500 font-medium">單坪租金</span>
-                  <span className="text-xs text-[#00f0ff] font-mono font-bold tracking-tight">
-                    ${Math.round(selectedRental.price / pingValue).toLocaleString()} <span className="text-[10px] font-normal text-gray-500">/坪</span>
+                  <span className="text-[20px] text-gray-500 font-medium">單坪租金</span>
+                  <span className="text-[24px] text-[#00f0ff] font-mono font-bold tracking-tight">
+                    ${Math.round(selectedRental.price / pingValue).toLocaleString()} <span className="text-[20px] font-normal text-gray-500">/坪</span>
                   </span>
                 </div>
               )}
               
-              {Object.entries(selectedRental.customFields).map(([key, value], i) => (
-                <div key={i} className="flex flex-col">
-                  <span className="text-[10px] text-gray-500 font-medium truncate">{key}</span>
-                  <span className="text-xs text-gray-200 font-mono truncate">{value || '-'}</span>
-                </div>
-              ))}
+              {Object.entries(selectedRental.customFields).map(([key, value], i) => {
+                const lowerKey = key.toLowerCase();
+                const isFullWidth = ['地址', 'address', '家具', '設備', 'facilities', 'furniture', '提供設備'].some(k => lowerKey.includes(k));
+                
+                return (
+                  <div key={i} className={`flex flex-col ${isFullWidth ? 'col-span-full' : ''}`}>
+                    <span className="text-[20px] text-gray-500 font-medium truncate" title={key}>{key}</span>
+                    <span className={`text-[15px] text-gray-200 font-mono ${isFullWidth ? 'break-words whitespace-normal' : 'truncate'}`} title={String(value || '-')}>{value || '-'}</span>
+                  </div>
+                );
+              })}
 
               {Object.keys(selectedRental.customFields).length === 0 && pingValue === null && (
-                 <div className="col-span-2 text-[10px] text-gray-600 font-mono italic">無其他自訂屬性</div>
+                 <div className="col-span-full text-[20px] text-gray-600 font-mono italic">無其他自訂屬性</div>
               )}
             </div>
           </div>
