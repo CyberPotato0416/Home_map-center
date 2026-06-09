@@ -220,14 +220,14 @@ html, body, #root {
 .custom-rent-marker .marker-badge {
   background-color: rgba(20, 22, 32, 0.95);
   backdrop-filter: blur(4px);
-  border: 1px solid var(--badge-border, rgba(0, 240, 255, 0.4));
-  color: var(--badge-text, #00f0ff);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 8px;
-  box-shadow: 0 0 8px var(--badge-border, rgba(0, 240, 255, 0.2)), inset 0 0 4px color-mix(in srgb, var(--badge-border) 30%, transparent);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2), inset 0 0 5px rgba(0, 240, 255, 0.1);
   text-align: center;
   white-space: nowrap;
   transition: all 0.2s ease;
@@ -236,17 +236,17 @@ html, body, #root {
 }
 
 .custom-rent-marker:hover .marker-badge {
-  border-color: var(--badge-border, #00f0ff);
-  box-shadow: 0 0 15px var(--badge-border, rgba(0, 240, 255, 0.4)), inset 0 0 8px color-mix(in srgb, var(--badge-border) 50%, transparent);
+  border-color: #00f0ff;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 8px rgba(0, 240, 255, 0.2);
   transform: scale(1.1);
   z-index: 1000;
 }
 
 .custom-rent-marker.selected .marker-badge {
-  background-color: color-mix(in srgb, var(--badge-border) 15%, rgba(20, 22, 32, 0.95));
-  border-color: var(--badge-border, #00f0ff);
+  background-color: rgba(0, 240, 255, 0.15);
+  border-color: #00f0ff;
   color: #fff;
-  box-shadow: 0 0 20px var(--badge-border, rgba(0, 240, 255, 0.6)), inset 0 0 10px color-mix(in srgb, var(--badge-border) 60%, transparent);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.6), inset 0 0 10px rgba(0, 240, 255, 0.4);
   transform: scale(1.15);
   z-index: 1001;
 }

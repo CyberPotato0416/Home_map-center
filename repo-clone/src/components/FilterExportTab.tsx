@@ -59,8 +59,6 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           }
 
           const parsedRentals: RentalProperty[] = [];
-          const fields = results.meta.fields || [];
-          const titleKeyFromHeader = fields.length > 1 ? fields[1] : null;
           
           rows.forEach((row, index) => {
             const keys = Object.keys(row);
@@ -70,7 +68,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             let lat = 0;
             let lng = 0;
             let price = 0;
-            let title = titleKeyFromHeader ? String(row[titleKeyFromHeader] || '').trim() : '';
+            let title = '';
             let link = '';
             let images: string[] = [];
             let pros: string[] = [];
@@ -89,12 +87,9 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                 lng = parseFloat(val);
               } else if (['price', 'rent', '租金', '價格'].some(kw => lowerK.includes(kw))) {
                 price = parseInt(val.replace(/[^0-9]/g, ''), 10);
-              } else if (k === titleKeyFromHeader) {
-                // Already used as primary title source
-              } else if (!title && ['title', 'name', '名稱', '標題', '社區'].some(kw => lowerK.includes(kw) && !lowerK.includes('狀態') && !lowerK.includes('裝潢'))) {
+              } else if (['title', 'name', '名稱', '標題', '租屋'].some(kw => lowerK.includes(kw))) {
                 title = val;
               } else if (lowerK === 'source_591_url' || lowerK === 'url' || lowerK === 'link' || lowerK === '網址' || lowerK === '連結') {
-
                 if (!link || lowerK === 'source_591_url') {
                   link = val;
                 }

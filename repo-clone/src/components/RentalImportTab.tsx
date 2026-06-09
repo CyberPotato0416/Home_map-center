@@ -337,7 +337,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
                 return (
                   <div key={i} className={`flex flex-col ${isFullWidth ? 'col-span-full' : ''}`}>
                     <span className="text-[10px] text-gray-500 font-medium truncate mb-0.5" title={key}>{key}</span>
-                    <span className={`text-[12px] text-gray-200 font-mono ${isFullWidth ? 'break-all whitespace-normal leading-relaxed' : 'truncate'}`} title={String(value || '-')}>{value || '-'}</span>
+                    <span className={`text-[12px] text-gray-200 font-mono ${isFullWidth ? 'break-words whitespace-normal leading-relaxed' : 'truncate'}`} title={String(value || '-')}>{value || '-'}</span>
                   </div>
                 );
               })}

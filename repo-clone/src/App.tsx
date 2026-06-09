@@ -11,7 +11,7 @@ import {
   MRT_STATIONS_DATA, 
   MRT_LINES_DATA 
 } from './constants';
-import { getRentColor, calculateRecommendedSalary, calculateDistance, calculateHomeScore } from './utils';
+import { getRentColor, calculateRecommendedSalary, calculateDistance } from './utils';
 import { getMrtLinesForStation } from './utils/mrtHelper';
 import { useMapInit } from './hooks/useMapInit';
 import { useMapLayers } from './hooks/useMapLayers';
@@ -184,36 +184,13 @@ export default function App() {
         const fieldsMatch = Object.values(rental.customFields).some(v => String(v).toLowerCase().includes(kw));
         if (!titleMatch && !prosMatch && !consMatch && !fieldsMatch) return;
       }
-      
-      let minMrtDist = Infinity;
-      MRT_STATIONS_DATA.forEach(station => {
-        const d = calculateDistance(rental.lat, rental.lng, station.coord[0] as number, station.coord[1] as number);
-        if (d < minMrtDist) minMrtDist = d;
-      });
-      const rpgData = calculateHomeScore(rental, distToOffice * 1000, minMrtDist);
-      const score = rpgData.totalScore;
-
-      let rarityBorderColor = '#9d9d9d';
-      if (score >= 85) rarityBorderColor = '#ffb800';
-      else if (score >= 75) rarityBorderColor = '#a335ee';
-      else if (score >= 60) rarityBorderColor = '#0070dd';
-      else if (score >= 50) rarityBorderColor = '#1eff00';
-
-      const rentTextColor = getRentColor(rental.price);
 
       const priceText = `$${(rental.price / 1000).toFixed(1)}K`;
       const isSelected = selectedRental?.id === rental.id;
       
       const customIcon = L.divIcon({
         className: `custom-rent-marker ${isSelected ? 'selected' : ''}`,
-        html: `
-          <div class="marker-badge" style="
-            --badge-border: ${rarityBorderColor}; 
-            --badge-text: ${rentTextColor};
-          ">
-            ${priceText}
-          </div>
-        `,
+        html: `<div class="marker-badge">${priceText}</div>`,
         iconSize: [60, 24],
         iconAnchor: [30, 12]
       });
