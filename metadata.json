@@ -1,0 +1,6 @@
+{
+  "name": "ZenithBIM Map Center",
+  "description": "591Premium 租屋通勤分析系統 - 築本科技台北辦公室 30km 關注半徑、雙北行政區租金統計熱圖與台北核心捷運路網 GIS 大眾通勤交會層",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
