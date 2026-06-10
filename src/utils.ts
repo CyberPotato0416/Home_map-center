@@ -115,11 +115,38 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
   }
 
   // 2. Space Ping
-  const pingValue = getNumber(['坪數', '坪']) || 5; // Default to 5
-  const spaceScore = Math.min(10, pingValue / 1.5);
+  const pingRaw = getNumber(['坪數', '坪']);
+  const pingForDisplay = pingRaw ?? 5; // Default to 5 for radar display only
+  const spaceScore = Math.min(10, pingForDisplay / 1.5);
+
+  // Space contribution to totalScore (step-based, only when data exists)
+  let spacePingAdd = 0;
+  let spacePingInfo = '未知';
+  if (pingRaw !== null && pingRaw !== undefined) {
+    if (pingRaw >= 12)      { spacePingAdd = 10; spacePingInfo = `${pingRaw} 坪`; }
+    else if (pingRaw >= 10) { spacePingAdd = 8;  spacePingInfo = `${pingRaw} 坪`; }
+    else if (pingRaw >= 8)  { spacePingAdd = 5;  spacePingInfo = `${pingRaw} 坪`; }
+    else if (pingRaw >= 5)  { spacePingAdd = 3;  spacePingInfo = `${pingRaw} 坪`; }
+    else                    { spacePingAdd = 0;  spacePingInfo = `${pingRaw} 坪（過小）`; }
+  }
+  score += spacePingAdd;
+  breakdown.push({ name: '坪數空間', value: spacePingInfo, score: spacePingAdd, type: spacePingAdd > 0 ? 'positive' : 'neutral' });
 
   // 3. Budget
   const budgetScore = Math.max(0, Math.min(10, (20000 - rental.price) / 1000));
+
+  // Budget contribution to totalScore (rent tier brackets)
+  let budgetAdd = 0;
+  const priceLabel = `${rental.price?.toLocaleString()} 元/月`;
+  if      (rental.price <= 9000)  { budgetAdd = 15; }
+  else if (rental.price <= 11000) { budgetAdd = 12; }
+  else if (rental.price <= 13000) { budgetAdd = 8;  }
+  else if (rental.price <= 15000) { budgetAdd = 5;  }
+  else if (rental.price <= 17000) { budgetAdd = 2;  }
+  else if (rental.price <= 20000) { budgetAdd = 0;  }
+  else                            { budgetAdd = -5; }
+  score += budgetAdd;
+  breakdown.push({ name: '月租金', value: priceLabel, score: budgetAdd, type: budgetAdd > 0 ? 'positive' : budgetAdd < 0 ? 'negative' : 'neutral' });
 
   // 4. Convenience (Elevator & Floor)
   let convenienceScore = 5;
