@@ -1,7 +1,16 @@
-import React, { useRef, useState } from 'react';
-import { UploadCloud, DownloadCloud, Database, Trash2, CheckCircle, XCircle, Search, SlidersHorizontal } from 'lucide-react';
-import Papa from 'papaparse';
-import { RentalProperty } from '../types';
+import React, { useRef, useState } from "react";
+import {
+  UploadCloud,
+  DownloadCloud,
+  Database,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
+import Papa from "papaparse";
+import { RentalProperty } from "../types";
 
 interface FilterExportTabProps {
   rentals: RentalProperty[];
@@ -15,6 +24,12 @@ interface FilterExportTabProps {
   setMaxDistance: (d: number) => void;
   searchKeyword: string;
   setSearchKeyword: (k: string) => void;
+  statusFilters?: { signing: boolean; reviewing: boolean; renting: boolean };
+  setStatusFilters?: (
+    f:
+      | { signing: boolean; reviewing: boolean; renting: boolean }
+      | ((prev: any) => any),
+  ) => void;
 }
 
 export const FilterExportTab: React.FC<FilterExportTabProps> = ({
@@ -29,6 +44,8 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
   setMaxDistance,
   searchKeyword,
   setSearchKeyword,
+  statusFilters,
+  setStatusFilters,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +55,10 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
   };
 
   const clearRentals = () => {
-    if (window.confirm('確定要清除所有租屋點位資料嗎？')) {
+    if (window.confirm("確定要清除所有租屋點位資料嗎？")) {
       setRentals([]);
       setSelectedRental(null);
-      localStorage.removeItem('my_rental_pins');
+      localStorage.removeItem("my_rental_pins");
     }
   };
 
@@ -54,81 +71,132 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
         try {
           const rows = results.data as any[];
           if (!rows || rows.length === 0) {
-            setError('CSV 檔案為空');
+            setError("CSV 檔案為空");
             return;
           }
 
           const parsedRentals: RentalProperty[] = [];
           const fields = results.meta.fields || [];
           const titleKeyFromHeader = fields.length > 1 ? fields[1] : null;
-          
+
           rows.forEach((row, index) => {
             const keys = Object.keys(row);
-            
+
             // Core mappers
-            let id = '';
+            let id = "";
             let lat = 0;
             let lng = 0;
             let price = 0;
-            let title = titleKeyFromHeader ? String(row[titleKeyFromHeader] || '').trim() : '';
-            let link = '';
+            let title = titleKeyFromHeader
+              ? String(row[titleKeyFromHeader] || "").trim()
+              : "";
+            let link = "";
             let images: string[] = [];
             let pros: string[] = [];
             let cons: string[] = [];
             const customFields: Record<string, string> = {};
 
-            keys.forEach(k => {
+            keys.forEach((k) => {
               const lowerK = k.toLowerCase();
-              const val = String(row[k] || '');
-              
-              if (['id'].includes(lowerK) && val) {
+              const val = String(row[k] || "");
+
+              if (["id"].includes(lowerK) && val) {
                 id = val;
-              } else if (['lat', 'latitude', '緯度'].some(kw => lowerK.includes(kw))) {
+              } else if (
+                ["lat", "latitude", "緯度"].some((kw) => lowerK.includes(kw))
+              ) {
                 lat = parseFloat(val);
-              } else if (['lng', 'longitude', 'long', '經度'].some(kw => lowerK.includes(kw))) {
+              } else if (
+                ["lng", "longitude", "long", "經度"].some((kw) =>
+                  lowerK.includes(kw),
+                )
+              ) {
                 lng = parseFloat(val);
-              } else if (['price', 'rent', '租金', '價格'].some(kw => lowerK.includes(kw))) {
-                price = parseInt(val.replace(/[^0-9]/g, ''), 10);
+              } else if (
+                ["price", "rent", "租金", "價格"].some((kw) =>
+                  lowerK.includes(kw),
+                )
+              ) {
+                price = parseInt(val.replace(/[^0-9]/g, ""), 10);
               } else if (k === titleKeyFromHeader) {
                 // Already used as primary title source
-              } else if (!title && ['title', 'name', '名稱', '標題', '物件'].some(kw => lowerK.includes(kw) && !lowerK.includes('狀態') && !lowerK.includes('裝潢'))) {
+              } else if (
+                !title &&
+                ["title", "name", "名稱", "標題", "物件"].some(
+                  (kw) =>
+                    lowerK.includes(kw) &&
+                    !lowerK.includes("狀態") &&
+                    !lowerK.includes("裝潢"),
+                )
+              ) {
                 title = val;
-              } else if (lowerK === 'source_591_url' || lowerK === 'url' || lowerK === 'link' || lowerK === '網址' || lowerK === '連結') {
-
-                if (!link || lowerK === 'source_591_url') {
+              } else if (
+                lowerK === "source_591_url" ||
+                lowerK === "url" ||
+                lowerK === "link" ||
+                lowerK === "網址" ||
+                lowerK === "連結"
+              ) {
+                if (!link || lowerK === "source_591_url") {
                   link = val;
                 }
-              } else if (['image', 'img', 'pic', 'photo', '照片', '圖片', 'cover'].some(kw => lowerK.includes(kw))) {
-                if (val && !lowerK.includes('original')) {
+              } else if (
+                ["image", "img", "pic", "photo", "照片", "圖片", "cover"].some(
+                  (kw) => lowerK.includes(kw),
+                )
+              ) {
+                if (val && !lowerK.includes("original")) {
                   // Prefer local images (without 'original' in key)
                   try {
-                    if (val.startsWith('[')) {
+                    if (val.startsWith("[")) {
                       images = JSON.parse(val.replace(/'/g, '"'));
                     } else {
-                      images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
+                      images = val
+                        .split(/[;,|]/)
+                        .map((s) =>
+                          s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim(),
+                        )
+                        .filter(Boolean);
                     }
                   } catch (e) {
-                    images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
+                    images = val
+                      .split(/[;,|]/)
+                      .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
+                      .filter(Boolean);
                   }
                 } else if (val && images.length === 0) {
                   // Fallback to original image URLs
                   try {
-                    if (val.startsWith('[')) {
+                    if (val.startsWith("[")) {
                       images = JSON.parse(val.replace(/'/g, '"'));
                     } else {
-                      images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
+                      images = val
+                        .split(/[;,|]/)
+                        .map((s) =>
+                          s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim(),
+                        )
+                        .filter(Boolean);
                     }
                   } catch (e) {
-                    images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
+                    images = val
+                      .split(/[;,|]/)
+                      .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
+                      .filter(Boolean);
                   }
                 }
-              } else if (['pros', '優點'].some(kw => lowerK.includes(kw))) {
+              } else if (["pros", "優點"].some((kw) => lowerK.includes(kw))) {
                 if (val) {
-                  pros = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
+                  pros = val
+                    .split(/[;,]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
                 }
-              } else if (['cons', '缺點'].some(kw => lowerK.includes(kw))) {
+              } else if (["cons", "缺點"].some((kw) => lowerK.includes(kw))) {
                 if (val) {
-                  cons = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
+                  cons = val
+                    .split(/[;,]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
                 }
               } else {
                 // Keep everything else as custom dynamic fields
@@ -138,35 +206,38 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
 
             // Only add if we have some coords
             if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-               // Fallback title
-               if (!title) title = `Property ${index + 1}`;
-               parsedRentals.push({
-                 id: id || `rent_${Date.now()}_${index}`,
-                 lat,
-                 lng,
-                 price: isNaN(price) ? 0 : price,
-                 title,
-                 link,
-                 images,
-                 pros,
-                 cons,
-                 customFields
-               });
+              // Fallback title
+              if (!title) title = `Property ${index + 1}`;
+              parsedRentals.push({
+                id: id || `rent_${Date.now()}_${index}`,
+                lat,
+                lng,
+                price: isNaN(price) ? 0 : price,
+                title,
+                link,
+                images,
+                pros,
+                cons,
+                customFields,
+              });
             }
           });
 
           if (parsedRentals.length > 0) {
-            setRentals(prevRentals => {
+            setRentals((prevRentals) => {
               const updatedRentals = [...prevRentals];
               let newlyAdded = 0;
               let updatedCount = 0;
               let deletedCount = 0;
 
-              parsedRentals.forEach(newRental => {
+              parsedRentals.forEach((newRental) => {
                 const existingIndex = updatedRentals.findIndex(
-                  r => r.id === newRental.id || (r.link && r.link === newRental.link) || (r.lat === newRental.lat && r.lng === newRental.lng)
+                  (r) =>
+                    r.id === newRental.id ||
+                    (r.link && r.link === newRental.link) ||
+                    (r.lat === newRental.lat && r.lng === newRental.lng),
                 );
-                
+
                 if (newRental.price === 0) {
                   // Price 0 means we should hide/delete this rental
                   if (existingIndex >= 0) {
@@ -183,31 +254,37 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                   }
                 }
               });
-              
+
               // Persist locally
-              localStorage.setItem('my_rental_pins', JSON.stringify(updatedRentals));
-              
+              localStorage.setItem(
+                "my_rental_pins",
+                JSON.stringify(updatedRentals),
+              );
+
               let msg = `成功匯入！目前共有 ${updatedRentals.length} 筆物件。\n`;
               if (newlyAdded > 0) msg += `- 新增: ${newlyAdded} 筆\n`;
               if (updatedCount > 0) msg += `- 更新: ${updatedCount} 筆\n`;
-              if (deletedCount > 0) msg += `- 刪除 (因租金為0): ${deletedCount} 筆\n`;
-              
+              if (deletedCount > 0)
+                msg += `- 刪除 (因租金為0): ${deletedCount} 筆\n`;
+
               alert(msg);
               return updatedRentals;
             });
           } else {
-            setError('無法解析出任何有效的座標點位。請確保包含「緯度」與「經度」欄位。');
+            setError(
+              "無法解析出任何有效的座標點位。請確保包含「緯度」與「經度」欄位。",
+            );
           }
         } catch (e: any) {
-          setError(`解析錯誤: ${e.message || '格式有誤'}`);
+          setError(`解析錯誤: ${e.message || "格式有誤"}`);
         }
-        
+
         // Clear input to allow re-upload
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (fileInputRef.current) fileInputRef.current.value = "";
       },
       error: (error) => {
         setError(`CSV 解析失敗: ${error.message}`);
-      }
+      },
     });
   };
 
@@ -219,35 +296,51 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
   };
 
   const exportToCSV = () => {
-    if (rentals.length === 0) return alert('目前沒有可匯出的租屋資料！');
-    
+    if (rentals.length === 0) return alert("目前沒有可匯出的租屋資料！");
+
     // Determine dynamic custom fields
     const customHeaders = new Set<string>();
-    rentals.forEach(r => Object.keys(r.customFields).forEach(k => customHeaders.add(k)));
+    rentals.forEach((r) =>
+      Object.keys(r.customFields).forEach((k) => customHeaders.add(k)),
+    );
     const customHeadersArray = Array.from(customHeaders);
-    
-    const headers = ['id', 'title', 'price', 'lat', 'lng', 'link', 'images', 'pros', 'cons', ...customHeadersArray];
-    const csvRows = [headers.join(',')];
-    
+
+    const headers = [
+      "id",
+      "title",
+      "price",
+      "lat",
+      "lng",
+      "link",
+      "images",
+      "pros",
+      "cons",
+      ...customHeadersArray,
+    ];
+    const csvRows = [headers.join(",")];
+
     for (const row of rentals) {
-      const values = headers.map(header => {
-        let val: any = '';
-        if (['id', 'title', 'price', 'lat', 'lng', 'link'].includes(header)) {
-          val = (row as any)[header] || '';
-        } else if (['images', 'pros', 'cons'].includes(header)) {
-           val = (row as any)[header].join(';');
+      const values = headers.map((header) => {
+        let val: any = "";
+        if (["id", "title", "price", "lat", "lng", "link"].includes(header)) {
+          val = (row as any)[header] || "";
+        } else if (["images", "pros", "cons"].includes(header)) {
+          val = (row as any)[header].join(";");
         } else {
-          val = row.customFields[header] || '';
+          val = row.customFields[header] || "";
         }
-        const escaped = ('' + val).replace(/"/g, '""');
+        const escaped = ("" + val).replace(/"/g, '""');
         return `"${escaped}"`;
       });
-      csvRows.push(values.join(','));
+      csvRows.push(values.join(","));
     }
-    
-    const csvBlob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+
+    const csvBlob = new Blob(
+      [new Uint8Array([0xef, 0xbb, 0xbf]), csvRows.join("\n")],
+      { type: "text/csv;charset=utf-8;" },
+    );
     const url = URL.createObjectURL(csvBlob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `rentals_export_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
@@ -255,24 +348,25 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
 
   return (
     <div className="flex flex-col gap-4 animate-fade-in">
-      <input 
-        type="file" 
-        accept=".csv" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        className="hidden" 
+      <input
+        type="file"
+        accept=".csv"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
       />
 
       {/* Backup & Import/Export Section */}
       <div className="bg-[#0f111a] border border-[#1e2330] rounded-xl p-4 shadow-lg flex flex-col gap-3 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-[#00f0ff]"></div>
-        
+
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
           <Database className="w-4 h-4 text-purple-400" />
           資料備份與匯出 (CSV)
         </div>
         <p className="text-[10px] text-gray-500 leading-relaxed font-sans">
-          您可以在此導出目前地圖上的所有租屋資料，也可以重新匯入新的 591 整理清單。
+          您可以在此導出目前地圖上的所有租屋資料，也可以重新匯入新的 591
+          整理清單。
         </p>
 
         {error && (
@@ -283,15 +377,15 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
         )}
 
         <div className="grid grid-cols-2 gap-2 mt-1">
-          <button 
+          <button
             onClick={handleImportClick}
             className="bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/30 text-[#00f0ff] text-[10px] font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <UploadCloud className="w-3.5 h-3.5" />
             📥 匯入 CSV
           </button>
-          
-          <button 
+
+          <button
             onClick={exportToCSV}
             className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
@@ -306,7 +400,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
               <CheckCircle className="w-3 h-3 text-emerald-400" />
               目前已載入 {rentals.length} 筆物件
             </div>
-            <button 
+            <button
               onClick={clearRentals}
               className="text-red-400 hover:text-red-300 flex items-center gap-1"
             >
@@ -325,7 +419,6 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
 
         {/* Filters */}
         <div className="flex flex-col gap-4">
-          
           {/* Keyword Search */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-mono text-gray-400 font-bold flex justify-between">
@@ -333,8 +426,8 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             </label>
             <div className="relative">
               <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="搜尋名稱、優缺點、標籤..."
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
@@ -347,11 +440,17 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-mono text-gray-400 font-bold flex justify-between">
               <span>💰 預算上限 (Max Budget)</span>
-              <span className="text-[#00f0ff]">${maxBudget.toLocaleString()}</span>
+              <span className="text-[#00f0ff]">
+                ${maxBudget.toLocaleString()}
+              </span>
             </label>
-            <input 
-              type="range" min="8000" max="18000" step="500" 
-              value={maxBudget} onChange={(e) => setMaxBudget(parseInt(e.target.value))}
+            <input
+              type="range"
+              min="8000"
+              max="18000"
+              step="500"
+              value={maxBudget}
+              onChange={(e) => setMaxBudget(parseInt(e.target.value))}
               className="w-full accent-[#00f0ff] opacity-80 hover:opacity-100 transition-opacity cursor-pointer h-1.5 bg-gray-800 rounded-full appearance-none"
             />
           </div>
@@ -362,9 +461,13 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
               <span>📐 最小坪數 (Min Size)</span>
               <span className="text-[#00f0ff]">{minSize} 坪</span>
             </label>
-            <input 
-              type="range" min="5" max="10" step="0.5" 
-              value={minSize} onChange={(e) => setMinSize(parseFloat(e.target.value))}
+            <input
+              type="range"
+              min="5"
+              max="10"
+              step="0.5"
+              value={minSize}
+              onChange={(e) => setMinSize(parseFloat(e.target.value))}
               className="w-full accent-purple-400 opacity-80 hover:opacity-100 transition-opacity cursor-pointer h-1.5 bg-gray-800 rounded-full appearance-none"
             />
           </div>
@@ -375,13 +478,107 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
               <span>🚶 最大通勤距離 (Max Dist.)</span>
               <span className="text-emerald-400">{maxDistance} km</span>
             </label>
-            <input 
-              type="range" min="1" max="20" step="0.5" 
-              value={maxDistance} onChange={(e) => setMaxDistance(parseFloat(e.target.value))}
+            <input
+              type="range"
+              min="1"
+              max="20"
+              step="0.5"
+              value={maxDistance}
+              onChange={(e) => setMaxDistance(parseFloat(e.target.value))}
               className="w-full accent-emerald-400 opacity-80 hover:opacity-100 transition-opacity cursor-pointer h-1.5 bg-gray-800 rounded-full appearance-none"
             />
           </div>
 
+          {/* Status Filters */}
+          {statusFilters && setStatusFilters && (
+            <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
+              <label className="text-[10px] font-mono text-gray-400 font-bold">
+                📋 簽約狀態 (Sign Status)
+              </label>
+              <div className="flex gap-3">
+                {/* 簽約中 */}
+                <label className="flex items-center gap-1.5 cursor-pointer group">
+                  <div
+                    className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${statusFilters.signing ? "bg-[#00f0ff] border-[#00f0ff]" : "bg-transparent border-gray-600"}`}
+                  >
+                    {statusFilters.signing && (
+                      <CheckCircle className="w-2.5 h-2.5 text-black" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[11px] font-mono transition-colors ${statusFilters.signing ? "text-gray-200" : "text-gray-500"}`}
+                  >
+                    簽約中
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={statusFilters.signing}
+                    onChange={(e) =>
+                      setStatusFilters((prev) => ({
+                        ...prev,
+                        signing: e.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+
+                {/* 審核中 */}
+                <label className="flex items-center gap-1.5 cursor-pointer group">
+                  <div
+                    className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${statusFilters.reviewing ? "bg-purple-400 border-purple-400" : "bg-transparent border-gray-600"}`}
+                  >
+                    {statusFilters.reviewing && (
+                      <CheckCircle className="w-2.5 h-2.5 text-black" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[11px] font-mono transition-colors ${statusFilters.reviewing ? "text-gray-200" : "text-gray-500"}`}
+                  >
+                    審核中
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={statusFilters.reviewing}
+                    onChange={(e) =>
+                      setStatusFilters((prev) => ({
+                        ...prev,
+                        reviewing: e.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+
+                {/* 招租中 */}
+                <label className="flex items-center gap-1.5 cursor-pointer group">
+                  <div
+                    className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${statusFilters.renting ? "bg-emerald-400 border-emerald-400" : "bg-transparent border-gray-600"}`}
+                  >
+                    {statusFilters.renting && (
+                      <CheckCircle className="w-2.5 h-2.5 text-black" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[11px] font-mono transition-colors ${statusFilters.renting ? "text-gray-200" : "text-gray-500"}`}
+                  >
+                    招租中
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={statusFilters.renting}
+                    onChange={(e) =>
+                      setStatusFilters((prev) => ({
+                        ...prev,
+                        renting: e.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

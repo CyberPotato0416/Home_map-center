@@ -1,17 +1,24 @@
-import React from 'react';
-import { Sword, Sliders, Layers, Train, FileSpreadsheet, Database } from 'lucide-react';
-import { RentData, MrtStation, RentalProperty } from '../types';
-import { MapControlTab } from './MapControlTab';
-import { RentHeatmapTab } from './RentHeatmapTab';
-import { MrtCommuteTab } from './MrtCommuteTab';
-import { RentalImportTab } from './RentalImportTab';
-import { FilterExportTab } from './FilterExportTab';
+import React from "react";
+import {
+  Sword,
+  Sliders,
+  Layers,
+  Train,
+  FileSpreadsheet,
+  Database,
+} from "lucide-react";
+import { RentData, MrtStation, RentalProperty } from "../types";
+import { MapControlTab } from "./MapControlTab";
+import { RentHeatmapTab } from "./RentHeatmapTab";
+import { MrtCommuteTab } from "./MrtCommuteTab";
+import { RentalImportTab } from "./RentalImportTab";
+import { FilterExportTab } from "./FilterExportTab";
 
 interface SidebarProps {
   isSidebarOpen: boolean;
   activeTab: number;
   setActiveTab: (tab: number) => void;
-  
+
   // Tab 1 state
   radius: number;
   setRadius: (r: number) => void;
@@ -56,7 +63,13 @@ interface SidebarProps {
   setMaxDistance: (d: number) => void;
   searchKeyword: string;
   setSearchKeyword: (k: string) => void;
-  
+  statusFilters: { signing: boolean; reviewing: boolean; renting: boolean };
+  setStatusFilters: (
+    f:
+      | { signing: boolean; reviewing: boolean; renting: boolean }
+      | ((prev: any) => any),
+  ) => void;
+
   sidebarWidth: number;
   setSidebarWidth: (w: number) => void;
   isSidebarDragging: boolean;
@@ -109,55 +122,63 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setMaxDistance,
   searchKeyword,
   setSearchKeyword,
+  statusFilters,
+  setStatusFilters,
   sidebarWidth,
   setSidebarWidth,
   isSidebarDragging,
   setIsSidebarDragging,
-  onResizeComplete
+  onResizeComplete,
 }) => {
-  const startResizing = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    if (window.innerWidth < 768) return; // Disable drag on mobile
+  const startResizing = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (window.innerWidth < 768) return; // Disable drag on mobile
 
-    setIsSidebarDragging(true);
-    const startX = e.clientX;
-    const startWidth = sidebarWidth;
+      setIsSidebarDragging(true);
+      const startX = e.clientX;
+      const startWidth = sidebarWidth;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      let newWidth = startWidth - deltaX;
-      if (newWidth < 320) newWidth = 320;
-      if (newWidth > document.body.clientWidth * 0.8) newWidth = document.body.clientWidth * 0.8;
-      setSidebarWidth(newWidth);
-    };
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const deltaX = moveEvent.clientX - startX;
+        let newWidth = startWidth - deltaX;
+        if (newWidth < 320) newWidth = 320;
+        if (newWidth > document.body.clientWidth * 0.8)
+          newWidth = document.body.clientWidth * 0.8;
+        setSidebarWidth(newWidth);
+      };
 
-    const handleMouseUp = () => {
-      setIsSidebarDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      setTimeout(() => {
-        onResizeComplete();
-      }, 50);
-    };
+      const handleMouseUp = () => {
+        setIsSidebarDragging(false);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        setTimeout(() => {
+          onResizeComplete();
+        }, 50);
+      };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [sidebarWidth, setSidebarWidth, setIsSidebarDragging, onResizeComplete]);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [sidebarWidth, setSidebarWidth, setIsSidebarDragging, onResizeComplete],
+  );
 
   return (
-    <div 
-      id="sidebar" 
-      style={window.innerWidth >= 768 && isSidebarOpen ? { width: sidebarWidth } : {}}
+    <div
+      id="sidebar"
+      style={
+        window.innerWidth >= 768 && isSidebarOpen ? { width: sidebarWidth } : {}
+      }
       className={`relative h-[40vh] md:h-full overflow-y-auto bg-[#0a0b10] border-t md:border-t-0 md:border-l border-[#1e2330] flex flex-col order-2 md:order-2 shrink-0 ${
-        isSidebarDragging ? '' : 'transition-all duration-300 ease-in-out'
+        isSidebarDragging ? "" : "transition-all duration-300 ease-in-out"
       } ${
-        isSidebarOpen 
-          ? 'w-full md:w-[420px] opacity-100 visible' 
-          : 'w-0 md:w-0 opacity-0 invisible overflow-hidden border-l-0'
+        isSidebarOpen
+          ? "w-full md:w-[420px] opacity-100 visible"
+          : "w-0 md:w-0 opacity-0 invisible overflow-hidden border-l-0"
       }`}
     >
       {isSidebarOpen && window.innerWidth >= 768 && (
-        <div 
+        <div
           className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-[#00f0ff] hover:opacity-50 z-[100] transition-colors"
           onMouseDown={startResizing}
         />
@@ -169,64 +190,68 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Sword className="w-5 h-5 text-gray-900 font-bold" />
           </div>
           <div>
-            <div className="text-xs font-mono text-cyan-400 tracking-wider font-extrabold uppercase">592 Premium</div>
-            <h1 className="text-base font-bold text-gray-100 tracking-tight leading-tight">租屋通勤分析系統</h1>
+            <div className="text-xs font-mono text-cyan-400 tracking-wider font-extrabold uppercase">
+              592 Premium
+            </div>
+            <h1 className="text-base font-bold text-gray-100 tracking-tight leading-tight">
+              租屋通勤分析系統
+            </h1>
           </div>
         </div>
       </div>
 
       {/* CYBERPUNK CHRONO-TAB NAVIGATION */}
       <div className="flex bg-[#0c0d12] border-b border-[#1e2330] shrink-0 sticky top-0 z-30 select-none">
-        <button 
+        <button
           onClick={() => setActiveTab(1)}
           className={`flex-1 py-3 text-center text-xs font-bold transition-all duration-200 border-b-2 flex flex-col items-center justify-center gap-1 cursor-pointer outline-none ${
-            activeTab === 1 
-              ? 'text-[#00f0ff] border-[#00f0ff] bg-cyan-500/[0.04]' 
-              : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]'
+            activeTab === 1
+              ? "text-[#00f0ff] border-[#00f0ff] bg-cyan-500/[0.04]"
+              : "text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]"
           }`}
         >
           <Sliders className="w-4 h-4" />
           <span>地圖控制</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab(2)}
           className={`flex-1 py-3 text-center text-xs font-bold transition-all duration-200 border-b-2 flex flex-col items-center justify-center gap-1 cursor-pointer outline-none ${
-            activeTab === 2 
-              ? 'text-[#ff3860] border-[#ff3860] bg-red-500/[0.04]' 
-              : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]'
+            activeTab === 2
+              ? "text-[#ff3860] border-[#ff3860] bg-red-500/[0.04]"
+              : "text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]"
           }`}
         >
           <Layers className="w-4 h-4" />
           <span>租金熱圖</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab(3)}
           className={`flex-1 py-3 text-center text-xs font-bold transition-all duration-200 border-b-2 flex flex-col items-center justify-center gap-1 cursor-pointer outline-none ${
-            activeTab === 3 
-              ? 'text-amber-400 border-amber-400 bg-amber-500/[0.04]' 
-              : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]'
+            activeTab === 3
+              ? "text-amber-400 border-amber-400 bg-amber-500/[0.04]"
+              : "text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]"
           }`}
         >
           <Train className="w-4 h-4" />
           <span>捷運通勤</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab(4)}
           className={`flex-1 py-3 text-center text-[11px] font-bold transition-all duration-200 border-b-2 flex flex-col items-center justify-center gap-1 cursor-pointer outline-none ${
-            activeTab === 4 
-              ? 'text-[#00f0ff] border-[#00f0ff] bg-[#00f0ff]/[0.04]' 
-              : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]'
+            activeTab === 4
+              ? "text-[#00f0ff] border-[#00f0ff] bg-[#00f0ff]/[0.04]"
+              : "text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]"
           }`}
         >
           <FileSpreadsheet className="w-4 h-4" />
           <span>物件詳情</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab(5)}
           className={`flex-1 py-3 text-center text-[11px] font-bold transition-all duration-200 border-b-2 flex flex-col items-center justify-center gap-1 cursor-pointer outline-none ${
-            activeTab === 5 
-              ? 'text-purple-400 border-purple-400 bg-purple-500/[0.04]' 
-              : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]'
+            activeTab === 5
+              ? "text-purple-400 border-purple-400 bg-purple-500/[0.04]"
+              : "text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.02]"
           }`}
         >
           <Database className="w-4 h-4" />
@@ -303,6 +328,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             setMaxDistance={setMaxDistance}
             searchKeyword={searchKeyword}
             setSearchKeyword={setSearchKeyword}
+            statusFilters={statusFilters}
+            setStatusFilters={setStatusFilters}
           />
         )}
       </div>
