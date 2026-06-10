@@ -142,27 +142,27 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
       floorValStr = '地下室';
     } else if (floorNum <= 2) {
       convenienceScore = 10;
-      curConvenienceAdd = 0;
+      curConvenienceAdd = 10;
       floorValStr = `${floorNum} 樓`;
     } else if (floorNum === 3) {
       convenienceScore = 8;
-      curConvenienceAdd = -5;
+      curConvenienceAdd = 8;
       floorValStr = '無電梯 3 樓';
     } else if (floorNum === 4) {
       convenienceScore = 7;
-      curConvenienceAdd = -15;
+      curConvenienceAdd = 7;
       floorValStr = '無電梯 4 樓';
     } else if (floorNum === 5) {
       convenienceScore = 6;
-      curConvenienceAdd = -5;
+      curConvenienceAdd = 6;
       floorValStr = '無電梯 5 樓';
     } else if (floorNum >= 6) {
       convenienceScore = 2;
-      curConvenienceAdd = -10;
+      curConvenienceAdd = 2;
       floorValStr = `無電梯 ${floorNum} 樓`;
     } else {
       convenienceScore = 10;
-      curConvenienceAdd = 0;
+      curConvenienceAdd = 10;
       floorValStr = '無電梯低樓層';
     }
   }
@@ -193,17 +193,27 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
   }
 
   // AC Type
-  const isVariableAC = hasKeyword(['變頻冷氣', '變頻']);
-  const isFixedAC = hasKeyword(['定頻冷氣', '定頻']);
+  const acTypeVal = getField(['變頻冷氣', '冷氣']).toLowerCase();
   let acInfo = '未知';
   let acScore = 0;
-  if (isVariableAC) {
+
+  if (acTypeVal.includes('變頻分離') || acTypeVal.includes('變頻分離式')) {
+    acScore = 10;
+    acInfo = '變頻分離式';
+  } else if (acTypeVal.includes('分離') || acTypeVal.includes('分離式')) {
+    acScore = 5;
+    acInfo = '分離式';
+  } else if (acTypeVal.includes('窗型')) {
+    acScore = 0;
+    acInfo = '窗型冷氣';
+  } else if (acTypeVal === '是' || acTypeVal.includes('變頻')) {
     acScore = 10;
     acInfo = '變頻冷氣';
-  } else if (isFixedAC) {
+  } else if (acTypeVal.includes('定頻') || acTypeVal === '否') {
     acScore = -5;
     acInfo = '定頻冷氣';
   }
+
   score += acScore;
   breakdown.push({ name: '冷氣類型', value: acInfo, score: acScore, type: acScore > 0 ? 'positive' : acScore < 0 ? 'negative' : 'neutral' });
 
