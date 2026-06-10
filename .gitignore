@@ -7,8 +7,3 @@ coverage/
 .env*
 !.env.example
 scratch/
-public/rentals_images/
-rent_map_specs/
-assets/
-data/
-*.py

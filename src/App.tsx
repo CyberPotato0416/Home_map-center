@@ -209,9 +209,7 @@ export default function App() {
       if (rental.price > maxBudget) return;
 
       let ping = 0;
-      let hasSigning = false;
-      let hasReviewing = false;
-      let hasRenting = false;
+      let signStatusStr = "";
 
       for (const [key, val] of Object.entries(rental.customFields)) {
         const valStr = String(val);
@@ -221,15 +219,19 @@ export default function App() {
         ) {
           ping = parseFloat(valStr);
         }
-        if (valStr.includes("簽約中")) hasSigning = true;
-        if (valStr.includes("審核中")) hasReviewing = true;
-        if (valStr.includes("招租中")) hasRenting = true;
+        if (key.includes("簽約狀態") || key.includes("狀態")) {
+          signStatusStr = valStr;
+        }
       }
       if (ping > 0 && ping < minSize) return;
 
-      if (hasSigning && !statusFilters.signing) return;
-      if (hasReviewing && !statusFilters.reviewing) return;
-      if (hasRenting && !statusFilters.renting) return;
+      const isSigning = signStatusStr.includes("簽約中");
+      const isReviewing = signStatusStr.includes("審核中");
+      const isRenting = signStatusStr.includes("招租中") || (!isSigning && !isReviewing);
+
+      if (isSigning && !statusFilters.signing) return;
+      if (isReviewing && !statusFilters.reviewing) return;
+      if (isRenting && !statusFilters.renting) return;
 
       const distToOffice =
         calculateDistance(

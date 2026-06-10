@@ -30,7 +30,7 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
               src={
                 imageError
                   ? rental.images[currentImgIndex]
-                  : `https://raw.githubusercontent.com/CyberPotato0416/Home_map-center/main/public/rentals_images/${
+                  : `/rentals_images/${
                       rental.customFields?.original_591_id || rental.id
                     }/image_${currentImgIndex + 1}.jpg`
               }
