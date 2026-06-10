@@ -87,13 +87,13 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
   };
 
   // 1. Commute
-  const commuteScore = Math.max(0, Math.min(10, 10 - distToOfficeMeters / 300));
-  let commuteDistScore = distToOfficeMeters < 1000 ? 5 : distToOfficeMeters < 2000 ? -10 : -25;
-  if (distToOfficeMeters < 600) commuteDistScore = 15;
+  const distKm = distToOfficeMeters / 1000;
+  const commuteDistScore = distKm <= 1.0 ? 10 : 10 - Math.ceil((distKm - 1.0) / 0.5);
+  const commuteScore = Math.max(0, Math.min(10, commuteDistScore));
   score += commuteDistScore;
   breakdown.push({
     name: '距公司距離',
-    value: distToOfficeMeters < 1000 ? `${Math.round(distToOfficeMeters)}m` : `${(distToOfficeMeters / 1000).toFixed(1)}km`,
+    value: distToOfficeMeters < 1000 ? `${Math.round(distToOfficeMeters)}m` : `${distKm.toFixed(1)}km`,
     score: commuteDistScore,
     type: commuteDistScore > 0 ? 'positive' : commuteDistScore < 0 ? 'negative' : 'neutral'
   });
