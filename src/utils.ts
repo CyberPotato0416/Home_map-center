@@ -272,6 +272,19 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
     });
   }
 
+  // Parking Space (停車位)
+  // 有車位 ➡️ +10 分
+  const hasParking = hasKeyword(['停車位', '車位']);
+  if (hasParking) {
+    score += 10;
+    breakdown.push({
+      name: '停車位',
+      value: '有平面/室內車位',
+      score: 10,
+      type: 'positive'
+    });
+  }
+
   return {
     totalScore: Math.round(score),
     commuteScore,

@@ -301,7 +301,8 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
         "垃圾代收": trash_service,
         "租屋補助": subsidy_ok,
         "朝向": orientation,
-        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "notes": ""
     }
     
     return row_data
@@ -319,7 +320,7 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
         "images", "original_image_urls", "mrt_nearest_name", "mrt_nearest_distance", "facilities", 
         "聯絡人", "聯絡電話", "Line聯絡", "聯絡人身分", "管理費", "服務費",
         "裝潢等級", "衛浴等級", "電表類型", "電費", "公用費用", "停車位", "停車費", "電梯", "洗衣機", "變頻冷氣", "垃圾代收", "租屋補助", "朝向",
-        "created_at"
+        "created_at", "notes"
     ]
     
     # 讀取既有 CSV 中的所有物件
