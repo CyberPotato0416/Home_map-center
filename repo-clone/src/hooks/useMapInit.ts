@@ -50,9 +50,6 @@ export function useMapInit({
       zoomControl: false, // Disabling standard control for custom zoom placing on bottomright
       minZoom: 9,
       maxZoom: 18,
-      zoomDelta: 0.2,
-      zoomSnap: 0.2,
-      wheelPxPerZoomLevel: 120, // Customize if necessary to make scroll smoother
       trackResize: false, // Disable native resize so we can manually invalidateSize with { pan: false }
     });
 

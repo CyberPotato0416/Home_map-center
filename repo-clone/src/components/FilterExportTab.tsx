@@ -59,8 +59,6 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           }
 
           const parsedRentals: RentalProperty[] = [];
-          const fields = results.meta.fields || [];
-          const titleKeyFromHeader = fields.length > 1 ? fields[1] : null;
           
           rows.forEach((row, index) => {
             const keys = Object.keys(row);
@@ -70,7 +68,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             let lat = 0;
             let lng = 0;
             let price = 0;
-            let title = titleKeyFromHeader ? String(row[titleKeyFromHeader] || '').trim() : '';
+            let title = '';
             let link = '';
             let images: string[] = [];
             let pros: string[] = [];
@@ -89,38 +87,19 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                 lng = parseFloat(val);
               } else if (['price', 'rent', '租金', '價格'].some(kw => lowerK.includes(kw))) {
                 price = parseInt(val.replace(/[^0-9]/g, ''), 10);
-              } else if (k === titleKeyFromHeader) {
-                // Already used as primary title source
-              } else if (!title && ['title', 'name', '名稱', '標題', '物件'].some(kw => lowerK.includes(kw) && !lowerK.includes('狀態') && !lowerK.includes('裝潢'))) {
+              } else if (['title', 'name', '名稱', '標題', '租屋'].some(kw => lowerK.includes(kw))) {
                 title = val;
               } else if (lowerK === 'source_591_url' || lowerK === 'url' || lowerK === 'link' || lowerK === '網址' || lowerK === '連結') {
-
                 if (!link || lowerK === 'source_591_url') {
                   link = val;
                 }
               } else if (['image', 'img', 'pic', 'photo', '照片', '圖片', 'cover'].some(kw => lowerK.includes(kw))) {
                 if (val && !lowerK.includes('original')) {
                   // Prefer local images (without 'original' in key)
-                  try {
-                    if (val.startsWith('[')) {
-                      images = JSON.parse(val.replace(/'/g, '"'));
-                    } else {
-                      images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
-                    }
-                  } catch (e) {
-                    images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
-                  }
+                  images = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
                 } else if (val && images.length === 0) {
                   // Fallback to original image URLs
-                  try {
-                    if (val.startsWith('[')) {
-                      images = JSON.parse(val.replace(/'/g, '"'));
-                    } else {
-                      images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
-                    }
-                  } catch (e) {
-                    images = val.split(/[;,|]/).map(s => s.replace(/^\[?['"]?|['"]?\]?$/g, '').trim()).filter(Boolean);
-                  }
+                  images = val.split(/[;,]/).map(s => s.trim()).filter(Boolean);
                 }
               } else if (['pros', '優點'].some(kw => lowerK.includes(kw))) {
                 if (val) {
@@ -141,7 +120,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                // Fallback title
                if (!title) title = `Property ${index + 1}`;
                parsedRentals.push({
-                 id: id || `rent_${Date.now()}_${index}`,
+                 id: id || `rental-${Date.now()}-${index}`,
                  lat,
                  lng,
                  price: isNaN(price) ? 0 : price,

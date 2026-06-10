@@ -169,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Sword className="w-5 h-5 text-gray-900 font-bold" />
           </div>
           <div>
-            <div className="text-xs font-mono text-cyan-400 tracking-wider font-extrabold uppercase">592 Premium</div>
+            <div className="text-xs font-mono text-cyan-400 tracking-wider font-extrabold uppercase">591Premium</div>
             <h1 className="text-base font-bold text-gray-100 tracking-tight leading-tight">租屋通勤分析系統</h1>
           </div>
         </div>
@@ -309,7 +309,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* INNER CARD FOOTERS */}
       <div className="p-4 bg-[#0a0b10] border-t border-[#1e2330] text-center text-[10px] text-gray-500 font-mono tracking-wide mt-auto shrink-0 select-none">
-        © 2026 592 Premium | 個人化租屋通勤分析系統
+        © 2026 591Premium | 個人化租屋通勤分析系統
       </div>
     </div>
   );

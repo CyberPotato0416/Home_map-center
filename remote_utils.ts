@@ -116,24 +116,10 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
 
   // 2. Space Ping
   const pingValue = getNumber(['坪數', '坪']) || 5; // Default to 5
-  const spaceScore = Math.min(10, parseFloat((pingValue / 1.5).toFixed(1)));
-  score += spaceScore;
-  breakdown.push({
-    name: '空間力',
-    value: `${pingValue}坪`,
-    score: spaceScore,
-    type: spaceScore > 5 ? 'positive' : spaceScore < 3 ? 'negative' : 'neutral'
-  });
+  const spaceScore = Math.min(10, pingValue / 1.5);
 
   // 3. Budget
   const budgetScore = Math.max(0, Math.min(10, (20000 - rental.price) / 1000));
-  score += budgetScore;
-  breakdown.push({
-    name: '預算力',
-    value: `${rental.price}元`,
-    score: budgetScore,
-    type: budgetScore > 5 ? 'positive' : budgetScore < 3 ? 'negative' : 'neutral'
-  });
 
   // 4. Convenience (Elevator & Floor)
   let convenienceScore = 5;
@@ -156,27 +142,27 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
       floorValStr = '地下室';
     } else if (floorNum <= 2) {
       convenienceScore = 10;
-      curConvenienceAdd = 10;
+      curConvenienceAdd = 0;
       floorValStr = `${floorNum} 樓`;
     } else if (floorNum === 3) {
       convenienceScore = 8;
-      curConvenienceAdd = 8;
+      curConvenienceAdd = -5;
       floorValStr = '無電梯 3 樓';
     } else if (floorNum === 4) {
       convenienceScore = 7;
-      curConvenienceAdd = 7;
+      curConvenienceAdd = -15;
       floorValStr = '無電梯 4 樓';
     } else if (floorNum === 5) {
       convenienceScore = 6;
-      curConvenienceAdd = 6;
+      curConvenienceAdd = -5;
       floorValStr = '無電梯 5 樓';
     } else if (floorNum >= 6) {
       convenienceScore = 2;
-      curConvenienceAdd = 2;
+      curConvenienceAdd = -10;
       floorValStr = `無電梯 ${floorNum} 樓`;
     } else {
       convenienceScore = 10;
-      curConvenienceAdd = 10;
+      curConvenienceAdd = 0;
       floorValStr = '無電梯低樓層';
     }
   }
@@ -207,27 +193,17 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
   }
 
   // AC Type
-  const acTypeVal = getField(['變頻冷氣', '冷氣']).toLowerCase();
+  const isVariableAC = hasKeyword(['變頻冷氣', '變頻']);
+  const isFixedAC = hasKeyword(['定頻冷氣', '定頻']);
   let acInfo = '未知';
   let acScore = 0;
-
-  if (acTypeVal.includes('變頻分離') || acTypeVal.includes('變頻分離式')) {
-    acScore = 10;
-    acInfo = '變頻分離式';
-  } else if (acTypeVal.includes('分離') || acTypeVal.includes('分離式')) {
-    acScore = 5;
-    acInfo = '分離式';
-  } else if (acTypeVal.includes('窗型')) {
-    acScore = 0;
-    acInfo = '窗型冷氣';
-  } else if (acTypeVal === '是' || acTypeVal.includes('變頻')) {
+  if (isVariableAC) {
     acScore = 10;
     acInfo = '變頻冷氣';
-  } else if (acTypeVal.includes('定頻') || acTypeVal === '否') {
+  } else if (isFixedAC) {
     acScore = -5;
     acInfo = '定頻冷氣';
   }
-
   score += acScore;
   breakdown.push({ name: '冷氣類型', value: acInfo, score: acScore, type: acScore > 0 ? 'positive' : acScore < 0 ? 'negative' : 'neutral' });
 
@@ -293,19 +269,6 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
       value: electricInfo, 
       score: electricScore, 
       type: electricScore > 0 ? 'positive' : 'negative' 
-    });
-  }
-
-  // Parking Space (停車位)
-  // 有車位 ➡️ +10 分
-  const hasParking = hasKeyword(['停車位', '車位']);
-  if (hasParking) {
-    score += 10;
-    breakdown.push({
-      name: '停車位',
-      value: '有平面/室內車位',
-      score: 10,
-      type: 'positive'
     });
   }
 
