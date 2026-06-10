@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Building, Image as ImageIcon, Train, Navigation, Info, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building, Image as ImageIcon, Train, Bus, Navigation, Info, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { RentalProperty } from '../types';
 import { calculateDistance, calculateHomeScore } from '../utils';
 import { COMPANY_COORDS, MRT_STATIONS_DATA } from '../constants';
@@ -62,6 +62,17 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
       }
     }
     return null;
+  }, [selectedRental]);
+
+  // Try to find nearest bus stop from customFields
+  const busInfo = useMemo(() => {
+    if (!selectedRental) return '未知';
+    for (const [key, val] of Object.entries(selectedRental.customFields || {})) {
+      if (key.includes('公車站') || key.toLowerCase().includes('bus')) {
+        return String(val);
+      }
+    }
+    return '未知';
   }, [selectedRental]);
 
   const rpgData = useMemo(() => {
@@ -191,12 +202,25 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
             <div className="w-[1px] h-8 bg-white/10 shrink-0 mx-2"></div>
             <div className="flex flex-col gap-1">
               <span className="text-gray-500 flex items-center gap-1">
-                <Train className="w-3.5 h-3.5" />最近捷運站
+                <Train className="w-3.5 h-3.5 text-emerald-400" />最近捷運站
               </span>
               <span className="font-mono text-gray-200 font-bold">
                 {commuteData.nearestMrt || '未知'} <span className="text-gray-500 font-normal text-[10px]">({Math.round(commuteData.minMrtDist)}m)</span>
               </span>
             </div>
+            {busInfo !== '未知' && (
+              <>
+                <div className="w-[1px] h-8 bg-white/10 shrink-0 mx-2"></div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-gray-500 flex items-center gap-1">
+                    <Bus className="w-3.5 h-3.5 text-sky-400" />最近公車站
+                  </span>
+                  <span className="font-mono text-gray-200 font-bold">
+                    {busInfo}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* 3. Score & Notes */}

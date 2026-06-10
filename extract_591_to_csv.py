@@ -302,6 +302,7 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
         "租屋補助": subsidy_ok,
         "朝向": orientation,
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "bus_nearest_name": "",
         "notes": ""
     }
     
@@ -317,7 +318,7 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
     fieldnames = [
         "id", "title", "price", "size_ping", "floor", "type", "address", 
         "latitude", "longitude", "source_591_url", "original_591_id", 
-        "images", "original_image_urls", "mrt_nearest_name", "mrt_nearest_distance", "facilities", 
+        "images", "original_image_urls", "mrt_nearest_name", "mrt_nearest_distance", "bus_nearest_name", "facilities", 
         "聯絡人", "聯絡電話", "Line聯絡", "聯絡人身分", "管理費", "服務費",
         "裝潢等級", "衛浴等級", "電表類型", "電費", "公用費用", "停車位", "停車費", "電梯", "洗衣機", "變頻冷氣", "垃圾代收", "租屋補助", "朝向",
         "created_at", "notes"
