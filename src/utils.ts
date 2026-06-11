@@ -116,24 +116,12 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
 
   // 2. Space Ping
   const pingValue = getNumber(['坪數', '坪']) || 5; // Default to 5
-  const spaceScore = Math.min(10, parseFloat((pingValue / 1.5).toFixed(1)));
+  const spaceScore = Math.round(Math.min(10, pingValue / 1.5));
   score += spaceScore;
-  breakdown.push({
-    name: '空間力',
-    value: `${pingValue}坪`,
-    score: spaceScore,
-    type: spaceScore > 5 ? 'positive' : spaceScore < 3 ? 'negative' : 'neutral'
-  });
 
   // 3. Budget
-  const budgetScore = Math.max(0, Math.min(10, (20000 - rental.price) / 1000));
+  const budgetScore = Math.round(Math.max(0, Math.min(10, (20000 - rental.price) / 1000)));
   score += budgetScore;
-  breakdown.push({
-    name: '預算力',
-    value: `${rental.price}元`,
-    score: budgetScore,
-    type: budgetScore > 5 ? 'positive' : budgetScore < 3 ? 'negative' : 'neutral'
-  });
 
   // 4. Convenience (Elevator & Floor)
   let convenienceScore = 5;
