@@ -27,7 +27,7 @@ import { Sidebar } from "./components/Sidebar";
 
 export default function App() {
   // State variables for analytics and interaction
-  const [radius, setRadius] = useState<number>(5); // Radius in kilometers (default 5)
+  const [radius, setRadius] = useState<number>(4); // Radius in kilometers (default 5)
   const [showCircle, setShowCircle] = useState<boolean>(true); // Toggle circle visibility
   const [zoomLevel, setZoomLevel] = useState<number>(11); // Initial map zoom state
   const [mapCenterPos, setMapCenterPos] = useState<{
@@ -63,7 +63,7 @@ export default function App() {
   );
   const [maxBudget, setMaxBudget] = useState<number>(18000);
   const [minSize, setMinSize] = useState<number>(5);
-  const [maxDistance, setMaxDistance] = useState<number>(5);
+  const [maxDistance, setMaxDistance] = useState<number>(4);
   const [searchKeyword, setSearchKeyword] = useState<string>("");
 
   const [statusFilters, setStatusFilters] = useState<{
@@ -395,9 +395,10 @@ export default function App() {
     // Fit the map view to the exact boundary of the circle overlay so it occupies the viewport elegantly
     // Tightened the padding constraint down to [10, 10] (or [5, 5]) so it fits securely close to boundaries
     // We compute the bounds dynamically so it works seamlessly even if showCircle is toggled off
-    const bounds = L.latLng(COMPANY_COORDS).toBounds(radius * 1000);
+    // Note: L.latLng.toBounds takes sizeInMeters (which means diameter for a circle)
+    const bounds = L.latLng(COMPANY_COORDS).toBounds(radius * 2000);
     mapInstanceRef.current.fitBounds(bounds, {
-      padding: [10, 10],
+      padding: [40, 40],
       animate: true,
       duration: 1.2,
     });

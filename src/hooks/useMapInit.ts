@@ -50,17 +50,22 @@ export function useMapInit({
       zoomControl: false, // Disabling standard control for custom zoom placing on bottomright
       minZoom: 9,
       maxZoom: 18,
-      zoomDelta: 0.2,
-      zoomSnap: 0.2,
-      wheelPxPerZoomLevel: 120, // Customize if necessary to make scroll smoother
+      zoomDelta: 0.5,
+      zoomSnap: 0.5,
+      wheelPxPerZoomLevel: 40, // Smaller values mean faster zooming
       trackResize: false, // Disable native resize so we can manually invalidateSize with { pan: false }
     });
 
     mapInstanceRef.current = map;
 
+    map.createPane('circlePane');
+    if (map.getPane('circlePane')) {
+      map.getPane('circlePane')!.style.zIndex = '380';
+    }
+
     map.createPane('districtsPane');
     if (map.getPane('districtsPane')) {
-      map.getPane('districtsPane')!.style.zIndex = '390'; // Place below overlayPane (400)
+      map.getPane('districtsPane')!.style.zIndex = '390'; // Place between circle and overlay panes
     }
 
     // 2. Add custom styled dark-matter tile layers
@@ -108,8 +113,6 @@ export function useMapInit({
         offset: [0, -10]
       });
 
-    // Fire default open popup
-    marker.openPopup();
     markerLayerRef.current = marker;
 
     // 5. Instantiating the custom dashed circle overlay for double-north coverage range (30km initial)
@@ -119,7 +122,9 @@ export function useMapInit({
       fillColor: '#00f0ff', // Light cyan blue filling
       fillOpacity: 0.025,
       weight: 1.5,
-      dashArray: '6, 6'
+      dashArray: '6, 6',
+      interactive: false,
+      pane: 'circlePane'
     }).addTo(map);
 
     circleLayerRef.current = circle;
