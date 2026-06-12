@@ -10,16 +10,60 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   rental,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
-  const [imageError, setImageError] = useState(false);
+  const [fallbackToAlternateExt, setFallbackToAlternateExt] = useState(false);
+  const [isFailedCompletely, setIsFailedCompletely] = useState(false);
 
   useEffect(() => {
     setCurrentImgIndex(0);
-    setImageError(false);
+    setFallbackToAlternateExt(false);
+    setIsFailedCompletely(false);
   }, [rental]);
 
   useEffect(() => {
-    setImageError(false);
+    setFallbackToAlternateExt(false);
+    setIsFailedCompletely(false);
   }, [currentImgIndex]);
+
+  const idValue = rental.customFields?.original_591_id || rental.id;
+  const currentImgUrl = rental.images && rental.images[currentImgIndex];
+
+  // Robust image path resolver
+  const getImgSrc = () => {
+    if (!currentImgUrl) return "";
+
+    // If it has completely failed, fallback to the original remote URL as a last resort
+    if (isFailedCompletely) {
+      return currentImgUrl;
+    }
+
+    // Determine target file extension
+    const isPng = currentImgUrl.toLowerCase().includes(".png");
+    const primaryExt = isPng ? "png" : "jpg";
+    const alternateExt = isPng ? "jpg" : "png";
+    const activeExt = fallbackToAlternateExt ? alternateExt : primaryExt;
+
+    // If it's already a local path, use it directly (apply extension fallback if needed)
+    if (currentImgUrl.startsWith("/") || !currentImgUrl.startsWith("http")) {
+      if (fallbackToAlternateExt) {
+        if (currentImgUrl.endsWith(".jpg")) return currentImgUrl.replace(/\.jpg$/, ".png");
+        if (currentImgUrl.endsWith(".png")) return currentImgUrl.replace(/\.png$/, ".jpg");
+      }
+      return currentImgUrl;
+    }
+
+    // Rewrite remote URLs to local path
+    return `/rentals_images/${idValue}/image_${currentImgIndex + 1}.${activeExt}`;
+  };
+
+  const handleImageError = () => {
+    if (!fallbackToAlternateExt) {
+      // First error: try switching extension (.jpg <-> .png)
+      setFallbackToAlternateExt(true);
+    } else if (!isFailedCompletely) {
+      // Second error: fallback to original URL (remote hotlink, might fail but last resort)
+      setIsFailedCompletely(true);
+    }
+  };
 
   return (
     <div className="space-y-1.5 relative group">
@@ -27,15 +71,9 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
         {rental.images && rental.images.length > 0 ? (
           <>
             <img
-              src={
-                imageError
-                  ? rental.images[currentImgIndex]
-                  : `/rentals_images/${
-                      rental.customFields?.original_591_id || rental.id
-                    }/image_${currentImgIndex + 1}.jpg`
-              }
+              src={getImgSrc()}
               alt="preview"
-              onError={() => setImageError(true)}
+              onError={handleImageError}
               className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
             />
             {rental.images.length > 1 && (
@@ -91,3 +129,4 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     </div>
   );
 };
+
