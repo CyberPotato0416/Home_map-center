@@ -24,7 +24,29 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     setIsFailedCompletely(false);
   }, [currentImgIndex]);
 
-  const idValue = rental.customFields?.original_591_id || rental.id;
+  // Helper to extract the 591 or dd-room ID from rental details
+  const getCleanId = () => {
+    if (rental.customFields?.original_591_id) {
+      return rental.customFields.original_591_id;
+    }
+    if (rental.customFields?.original_id) {
+      return rental.customFields.original_id;
+    }
+
+    const url = rental.link || rental.customFields?.source_591_url || "";
+    const match591 = url.match(/(?:rent\.591\.com\.tw\/|detail-|id=)(\d+)/) || url.match(/\b(\d{7,9})\b/);
+    if (match591) {
+      return match591[1];
+    }
+    const matchDDRoom = url.match(/\/object\/([a-zA-Z0-9]+)/);
+    if (matchDDRoom) {
+      return matchDDRoom[1];
+    }
+
+    return rental.id.replace(/^rent_/, "");
+  };
+
+  const idValue = getCleanId();
   const currentImgUrl = rental.images && rental.images[currentImgIndex];
 
   // Robust image path resolver
