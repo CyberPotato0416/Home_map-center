@@ -46,9 +46,13 @@ export function useMapLayers({
     if (!map || !geojsonGroupRef.current) return;
 
     if (showHeatmap) {
-      map.addLayer(geojsonGroupRef.current);
+      if (!map.hasLayer(geojsonGroupRef.current)) {
+        map.addLayer(geojsonGroupRef.current);
+      }
     } else {
-      map.removeLayer(geojsonGroupRef.current);
+      if (map.hasLayer(geojsonGroupRef.current)) {
+        map.removeLayer(geojsonGroupRef.current);
+      }
     }
   }, [showHeatmap]);
 
@@ -58,9 +62,13 @@ export function useMapLayers({
     if (!map || !mrtLinesGroupRef.current) return;
 
     if (showMrtLines) {
-      map.addLayer(mrtLinesGroupRef.current);
+      if (!map.hasLayer(mrtLinesGroupRef.current)) {
+        map.addLayer(mrtLinesGroupRef.current);
+      }
     } else {
-      map.removeLayer(mrtLinesGroupRef.current);
+      if (map.hasLayer(mrtLinesGroupRef.current)) {
+        map.removeLayer(mrtLinesGroupRef.current);
+      }
     }
   }, [showMrtLines]);
 
@@ -70,9 +78,13 @@ export function useMapLayers({
     if (!map || !mrtStationsGroupRef.current) return;
 
     if (showMrtStations) {
-      map.addLayer(mrtStationsGroupRef.current);
+      if (!map.hasLayer(mrtStationsGroupRef.current)) {
+        map.addLayer(mrtStationsGroupRef.current);
+      }
     } else {
-      map.removeLayer(mrtStationsGroupRef.current);
+      if (map.hasLayer(mrtStationsGroupRef.current)) {
+        map.removeLayer(mrtStationsGroupRef.current);
+      }
     }
   }, [showMrtStations]);
 }
