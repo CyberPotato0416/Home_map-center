@@ -78,6 +78,9 @@ interface SidebarProps {
   isSidebarDragging: boolean;
   setIsSidebarDragging: (d: boolean) => void;
   onResizeComplete: () => void;
+
+  desiredRent: number;
+  setDesiredRent: (r: number) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -131,6 +134,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   statusFilters,
   setStatusFilters,
   sidebarWidth,
+  desiredRent,
+  setDesiredRent,
   setSidebarWidth,
   isSidebarDragging,
   setIsSidebarDragging,
@@ -321,6 +326,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             selectedRental={selectedRental}
             setSelectedRental={setSelectedRental}
             targetCenter={targetCenter}
+            desiredRent={desiredRent}
             sidebarWidth={sidebarWidth}
           />
         )}
@@ -338,6 +344,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             setMaxDistance={setMaxDistance}
             searchKeyword={searchKeyword}
             setSearchKeyword={setSearchKeyword}
+            desiredRent={desiredRent}
+            setDesiredRent={setDesiredRent}
             statusFilters={statusFilters}
             setStatusFilters={setStatusFilters}
           />
