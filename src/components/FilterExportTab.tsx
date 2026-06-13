@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   UploadCloud,
   DownloadCloud,
@@ -8,6 +8,10 @@ import {
   XCircle,
   Search,
   SlidersHorizontal,
+  FolderOpen,
+  Image as ImageIcon,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import Papa from "papaparse";
 import { RentalProperty } from "../types";
@@ -49,6 +53,249 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // ⚡ 591Premium 相片直灌載入器狀態與處理虛擬機 ⚡
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [imageStatus, setImageStatus] = useState<{ name: string; count: number; isIdFolder: boolean }[]>([]);
+  const [showStatusList, setShowStatusList] = useState<boolean>(false);
+  const [dragActive, setDragActive] = useState<boolean>(false);
+  
+  const zipInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshImageStatus = async () => {
+    try {
+      const res = await fetch("/api/rentals-images-status");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.folders)) {
+          const sorted = data.folders.sort((a: any, b: any) => a.name.localeCompare(b.name));
+          setImageStatus(sorted);
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching images status:", e);
+    }
+  };
+
+  useEffect(() => {
+    refreshImageStatus();
+  }, []);
+
+  const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleZipClick = () => {
+    zipInputRef.current?.click();
+  };
+
+  const readEntryFiles = async (
+    entry: any,
+    pathList: { file: File; path: string }[] = [],
+    currentPath = ""
+  ) => {
+    if (entry.isFile) {
+      const file = await new Promise<File>((resolve, reject) => entry.file(resolve, reject));
+      const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+      if ([".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext)) {
+        pathList.push({ file, path: `${currentPath}${file.name}` });
+      }
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      const readAllEntries = async (): Promise<any[]> => {
+        const allEntries: any[] = [];
+        const readBatch = async (): Promise<any[]> => {
+          return new Promise((resolve) => {
+            dirReader.readEntries((entries: any[]) => resolve(entries));
+          });
+        };
+        let batch = await readBatch();
+        while (batch && batch.length > 0) {
+          allEntries.push(...batch);
+          batch = await readBatch();
+        }
+        return allEntries;
+      };
+
+      const entries = await readAllEntries();
+      for (const ent of entries) {
+        await readEntryFiles(ent, pathList, `${currentPath}${entry.name}/`);
+      }
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    setUploading(true);
+    setUploadProgress("正在解析拖放的資料與壓縮檔...");
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      const items = Array.from(e.dataTransfer.items || []) as any[];
+      const entries = items.map((item) => item.webkitGetAsEntry()).filter(Boolean);
+
+      // Check archives (.zip, .rar)
+      const archiveFiles: File[] = [];
+      const files = Array.from(e.dataTransfer.files || []) as File[];
+      files.forEach((f) => {
+        const lowerName = f.name.toLowerCase();
+        if (lowerName.endsWith(".zip") || lowerName.endsWith(".rar")) {
+          archiveFiles.push(f);
+        }
+      });
+
+      if (archiveFiles.length > 0) {
+        const file = archiveFiles[0];
+        const isZip = file.name.toLowerCase().endsWith(".zip");
+        setUploadProgress(
+          `正在上傳壓縮檔 ${file.name}... (大小: ${(file.size / 1024 / 1024).toFixed(1)}MB)，解壓耗時請保持連線...`
+        );
+
+        const endpoint = isZip ? "/api/upload-zip" : "/api/upload-rar";
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": isZip ? "application/zip" : "application/octet-stream",
+          },
+          body: file,
+        });
+
+        if (res.ok) {
+          setUploadSuccess(`成功！${file.name} 已於雲端沙盒解壓縮並灌入到位！`);
+          refreshImageStatus();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setUploadError(errData.error || "解壓失敗，請嘗試直接拖放解壓後的資料夾！");
+        }
+        setUploading(false);
+        return;
+      }
+
+      // Recursive directories structure
+      if (entries.length > 0) {
+        const pathList: { file: File; path: string }[] = [];
+        for (const entry of entries) {
+          await readEntryFiles(entry, pathList);
+        }
+
+        if (pathList.length === 0) {
+          setUploadError("未偵測到任何相片。拖放前請確認資料夾內含 JPG / PNG 圖片物件。");
+          setUploading(false);
+          return;
+        }
+
+        const cleanedPaths = pathList.map((item) => {
+          let relPath = item.path;
+          const index = relPath.indexOf("rentals_images/");
+          if (index >= 0) {
+            relPath = relPath.substring(index);
+          } else {
+            relPath = `rentals_images/${relPath}`;
+          }
+          return { file: item.file, targetPath: relPath };
+        });
+
+        const totalFiles = cleanedPaths.length;
+        setUploadProgress(`找到 ${totalFiles} 張相片，正進行背景通道分批灌入...`);
+
+        let uploadedCount = 0;
+        const uploadFileItem = async (item: { file: File; targetPath: string }) => {
+          const res = await fetch("/api/upload-file", {
+            method: "POST",
+            headers: {
+              "X-File-Path": item.targetPath,
+              "Content-Type": "application/octet-stream",
+            },
+            body: item.file,
+          });
+          if (!res.ok) {
+            throw new Error(`上傳 ${item.file.name} 失敗`);
+          }
+          uploadedCount++;
+          setUploadProgress(
+            `正在灌進沙盒身分庫: ${uploadedCount} / ${totalFiles} 張 (${Math.round(
+              (uploadedCount / totalFiles) * 100
+            )}%)`
+          );
+        };
+
+        const concurrency = 4;
+        const queue = [...cleanedPaths];
+        const workers = Array(concurrency)
+          .fill(null)
+          .map(async () => {
+            while (queue.length > 0) {
+              const item = queue.shift();
+              if (item) {
+                try {
+                  await uploadFileItem(item);
+                } catch (e) {
+                  console.error(e);
+                }
+              }
+            }
+          });
+
+        await Promise.all(workers);
+
+        setUploadSuccess(`已成功導入！一共灌進了 ${uploadedCount} 張相片物件！`);
+        refreshImageStatus();
+      } else {
+        setUploadError("不支援的物件。請拖入資料夾或壓縮檔 (.zip, .rar)！");
+      }
+    } catch (err: any) {
+      setUploadError(`灌入過程中斷，錯誤原因: ${err.message || err}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleZipFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const isZip = file.name.toLowerCase().endsWith(".zip");
+    setUploadProgress(`正在透過通道上傳 ${file.name}... (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      const endpoint = isZip ? "/api/upload-zip" : "/api/upload-rar";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": isZip ? "application/zip" : "application/octet-stream",
+        },
+        body: file,
+      });
+
+      if (res.ok) {
+        setUploadSuccess(`🎉 灌入完成！壓縮檔 ${file.name} 已於背景解壓並配對成功！`);
+        refreshImageStatus();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setUploadError(errData.error || "解壓失敗，請將檔案解壓後整包拖入！");
+      }
+    } catch (err: any) {
+      setUploadError(`傳輸或解壓失敗: ${err.message || err}`);
+    } finally {
+      setUploading(false);
+      if (zipInputRef.current) zipInputRef.current.value = "";
+    }
+  };
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -429,6 +676,145 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             </button>
           </div>
         )}
+      </div>
+
+      {/* ⚡ 591Premium 相片直灌通道 Loader Panel ⚡ */}
+      <div className="bg-[#0f111a] border border-[#1e2330] rounded-xl p-4 shadow-lg flex flex-col gap-3 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00f0ff] to-[#005fff]"></div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
+            <ImageIcon className="w-4 h-4 text-[#00f0ff]" />
+            相片資料夾直灌通道 (RAR/ZIP/Folder)
+          </div>
+          <button 
+            type="button"
+            onClick={refreshImageStatus}
+            title="點擊重整存量"
+            className="text-gray-500 hover:text-cyan-400 p-1 rounded hover:bg-white/5 transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <p className="text-[10px] text-gray-500 leading-relaxed font-sans">
+          您可以將<strong>「整包 rentals_images」</strong>資料夾直接拖入下方，或將相片壓縮成 <code>.zip</code> 檔/<code>.rar</code> 檔拖放或點選上傳，系統會自動在雲端沙盒完成解壓與配對。
+        </p>
+
+        {/* DRAG AND DROP AREA */}
+        <div
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+          onClick={handleZipClick}
+          className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 select-none ${
+            dragActive
+              ? "border-[#00f0ff] bg-cyan-500/10 text-[#00f0ff] scale-[0.99] shadow-inner shadow-[#00f0ff]/10"
+              : "border-[#1e2330] hover:border-cyan-500/40 hover:bg-[#161a25]/50 text-gray-400"
+          }`}
+        >
+          <input
+            type="file"
+            accept=".zip,.rar"
+            ref={zipInputRef}
+            onChange={handleZipFileChange}
+            className="hidden"
+          />
+
+          <UploadCloud className={`w-8 h-8 transition-transform duration-300 ${dragActive ? "animate-bounce text-[#00f0ff]" : "text-gray-500 hover:text-cyan-400"}`} />
+          
+          <div className="text-[10px] font-mono font-bold tracking-tight text-center">
+            {dragActive ? (
+              <span className="text-cyan-400">「偵測到拖放，請在此放開滑鼠」</span>
+            ) : (
+              <span>拖放 rentals_images 資料夾或 ZIP/RAR 檔至此</span>
+            )}
+          </div>
+          <div className="text-[9px] text-gray-600 text-center">
+            或點此瀏覽本機中的壓縮檔 (.zip, .rar)
+          </div>
+        </div>
+
+        {/* LOADING PROGRESS AND STATUS */}
+        {uploading && (
+          <div className="bg-cyan-500/5 border border-cyan-500/20 text-cyan-400 text-[10px] p-2.5 rounded-lg flex flex-col gap-2 font-mono">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00f0ff]" />
+              <span className="font-semibold text-gray-300">背景直灌通道運行中...</span>
+            </div>
+            <div className="text-[9px] text-gray-400 leading-snug">
+              {uploadProgress}
+            </div>
+            {/* PROGRESS SIMULATION SUB-BAR */}
+            <div className="w-full bg-[#161a25] rounded-full h-1 overflow-hidden">
+              <div className="bg-[#00f0ff] h-full animate-pulse transition-all duration-300" style={{ width: "100%" }}></div>
+            </div>
+          </div>
+        )}
+
+        {/* SUCCESS ALERTER */}
+        {uploadSuccess && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] p-2.5 rounded-lg flex items-start gap-2 font-sans">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="font-semibold text-gray-200">灌入成功！</div>
+              <p className="text-[9px] text-gray-400 mt-1 leading-snug">{uploadSuccess}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ERROR ALERTER */}
+        {uploadError && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-500 text-[10px] p-2.5 rounded-lg flex items-start gap-2 font-sans">
+            <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="font-semibold text-gray-200">管道受阻或未解壓</div>
+              <p className="text-[9px] text-red-400/80 mt-1 leading-snug">{uploadError}</p>
+            </div>
+          </div>
+        )}
+
+        {/* EXISTING COCKPIT DIRECTORIES PANEL */}
+        <div className="border-t border-[#1e2330]/60 pt-2 mt-1">
+          <button
+            type="button"
+            onClick={() => setShowStatusList(!showStatusList)}
+            className="w-full flex items-center justify-between text-[10px] font-mono text-gray-400 hover:text-cyan-400 transition-colors"
+          >
+            <span className="flex items-center gap-1.5 font-bold">
+              <FolderOpen className="w-3.5 h-3.5 text-cyan-500" />
+              開闢現存相片庫 ({imageStatus.length} 個夾)
+            </span>
+            <span className="text-gray-600 hover:text-gray-400 underline">
+              {showStatusList ? "收合目錄" : "展開檢視"}
+            </span>
+          </button>
+
+          {showStatusList && (
+            <div className="mt-2 max-h-[140px] overflow-y-auto bg-[#0a0c12] border border-[#1e2330]/80 rounded p-2 flex flex-col gap-1.5 custom-scrollbar font-mono text-[9px]">
+              {imageStatus.length === 0 ? (
+                <div className="text-gray-600 text-center py-2">（無現存 rentals_images 目錄，請先直灌）</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-1">
+                  {imageStatus.map((dir, idx) => (
+                    <div 
+                      key={idx}
+                      className="flex items-center justify-between bg-[#131622] p-1.5 rounded border border-[#1e2330]/40 text-gray-300"
+                    >
+                      <span className={`truncate ${dir.isIdFolder ? "text-cyan-400 font-bold" : "text-purple-400"}`}>
+                        📁 {dir.name}
+                      </span>
+                      <span className="text-gray-500 font-bold shrink-0">
+                        {dir.count} 張
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Advanced Filtering Section */}
