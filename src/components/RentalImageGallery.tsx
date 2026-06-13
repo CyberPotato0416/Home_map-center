@@ -15,22 +15,40 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   const [localFolderImageCount, setLocalFolderImageCount] = useState<number | null>(null);
 
   // 1. Core ID parsing logic
-  let idValue = rental.customFields?.original_591_id;
+  let idValue = "";
 
-  // Case-insensitive/approximate matching in custom fields
+  // 1.1 First priority: Try to extract actual ID from rental.images if it already has folder paths
+  if (rental.images && rental.images.length > 0) {
+    for (const img of rental.images) {
+      if (!img) continue;
+      const localFolder = img.match(/rentals_images\/([a-zA-Z0-9_\-]+)/);
+      if (
+        localFolder &&
+        localFolder[1] &&
+        localFolder[1] !== "rentals_images" &&
+        !localFolder[1].startsWith("[") &&
+        !localFolder[1].startsWith("http")
+      ) {
+        idValue = localFolder[1];
+        break;
+      }
+    }
+  }
+
+  // 1.2 Second priority: Try custom fields
   if (!idValue && rental.customFields) {
     for (const [k, v] of Object.entries(rental.customFields)) {
       const lk = k.toLowerCase().trim();
       if (
-        (lk === "original_591_id" || 
-         lk === "591_id" || 
-         lk === "id_591" || 
-         lk === "id" || 
-         lk === "original_id" ||
-         lk.includes("original_591") ||
-         lk.includes("物編") ||
-         lk.includes("編號")) && 
-        v && 
+        (lk === "original_591_id" ||
+          lk === "591_id" ||
+          lk === "id_591" ||
+          lk === "id" ||
+          lk === "original_id" ||
+          lk.includes("original_591") ||
+          lk.includes("物編") ||
+          lk.includes("編號")) &&
+        v &&
         String(v).trim()
       ) {
         idValue = String(v).trim();
@@ -39,7 +57,7 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     }
   }
 
-  // Fallback to URL matching
+  // 1.3 Third priority: Try source link
   if (!idValue && rental.link) {
     const match = rental.link.match(/(\d{6,})/) || rental.link.match(/object\/([a-zA-Z0-9]+)/);
     if (match) {
@@ -47,29 +65,12 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     } else {
       const rencoMatch = rental.link.match(/renco.*\/(\d+)/) || rental.link.match(/renco_(\d+)/);
       if (rencoMatch) {
-         idValue = `renco_${rencoMatch[1]}`;
+        idValue = `renco_${rencoMatch[1]}`;
       }
     }
   }
 
-  // Fallback to searching inside images urls
-  if (!idValue && rental.images && rental.images.length > 0) {
-    for (const img of rental.images) {
-      if (!img) continue;
-      const s3Renco = img.match(/renco-rentals-prod.*\/(\d+)\/medium/) || img.match(/s3.*renco.*\/(\d+)\//);
-      if (s3Renco) {
-        idValue = `renco_${s3Renco[1]}`;
-        break;
-      }
-      const localFolder = img.match(/rentals_images\/([a-zA-Z0-9_\-]+)/);
-      if (localFolder && localFolder[1] !== "rentals_images" && !localFolder[1].startsWith("[") && !localFolder[1].startsWith("http")) {
-        idValue = localFolder[1];
-        break;
-      }
-    }
-  }
-
-  // Ultimate fallback to primary ID
+  // 1.4 Ultimate priority fallback to ID
   if (!idValue) {
     idValue = rental.id;
   }
@@ -84,8 +85,9 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
         if (res.ok) {
           const data = await res.json();
           if (active && data && Array.isArray(data.folders)) {
-            const match = data.folders.find((f: any) => 
-              String(f.name).toLowerCase().trim() === String(idValue).toLowerCase().trim()
+            const match = data.folders.find(
+              (f: any) =>
+                String(f.name).toLowerCase().trim() === String(idValue).toLowerCase().trim()
             );
             if (match && match.count > 0) {
               setLocalFolderImageCount(match.count);
@@ -117,17 +119,24 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
 
   // 3. Formulate absolute image sources list
   const imagesToUse = useMemo(() => {
-    if (rental.images && rental.images.length > 0) {
-      return rental.images;
+    // 3.1 Prefer provided local images if they exist
+    const localImgPaths = (rental.images || []).filter(
+      (img) => img && (img.startsWith("/") || img.startsWith("rentals_images/"))
+    );
+    if (localImgPaths.length > 0) {
+      return localImgPaths;
     }
+
+    // 3.2 If folder exists on server with files, generate references
     if (localFolderImageCount !== null && localFolderImageCount > 0) {
-      // Build safe local references
-      return Array.from({ length: localFolderImageCount }, (_, i) => 
-        `/rentals_images/${idValue}/image_${i + 1}.jpg`
+      return Array.from(
+        { length: localFolderImageCount },
+        (_, i) => `/rentals_images/${idValue}/image_${i + 1}.jpg`
       );
     }
+
     return [];
-  }, [rental.images, localFolderImageCount, idValue]);
+  }, [rental, localFolderImageCount, idValue]);
 
   const currentImgUrl = imagesToUse[currentImgIndex];
 
@@ -135,22 +144,27 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   const getImgSrc = () => {
     if (!currentImgUrl) return "";
 
-    const isPng = currentImgUrl.toLowerCase().includes(".png");
-    const primaryExt = isPng ? "png" : "jpg";
-    const alternateExt = isPng ? "jpg" : "png";
-    const activeExt = fallbackToAlternateExt ? alternateExt : primaryExt;
+    let src = currentImgUrl;
 
-    const localPath = `/rentals_images/${idValue}/image_${currentImgIndex + 1}.${activeExt}`;
-
-    if (isFailedCompletely) {
-      // Last resort fallback
-      if (currentImgUrl.startsWith("http")) {
-        return currentImgUrl;
+    // Direct extension toggles (avoid discarding completely valid paths)
+    if (fallbackToAlternateExt) {
+      if (src.toLowerCase().endsWith(".jpg")) {
+        src = src.slice(0, -4) + ".png";
+      } else if (src.toLowerCase().endsWith(".png")) {
+        src = src.slice(0, -4) + ".jpg";
+      } else if (src.toLowerCase().endsWith(".jpeg")) {
+        src = src.slice(0, -5) + ".png";
       }
-      return `https://raw.githubusercontent.com/CyberPotato0416/Home_map-center/main/public${localPath}`;
     }
 
-    return localPath;
+    if (isFailedCompletely) {
+      // Direct local fallback (no remote hotlinking)
+      if (src.startsWith("/")) {
+        return src;
+      }
+    }
+
+    return src;
   };
 
   const handleImageError = () => {

@@ -413,23 +413,6 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                   }
                 } else if (val && lowerK.includes("original")) {
                   customFields[k] = val;
-                  if (images.length === 0) {
-                    try {
-                      if (val.startsWith("[")) {
-                        images = JSON.parse(val.replace(/'/g, '"'));
-                      } else {
-                        images = val
-                          .split(/[;,|]/)
-                          .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
-                          .filter(Boolean);
-                      }
-                    } catch(e) {
-                      images = val
-                        .split(/[;,|]/)
-                        .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
-                        .filter(Boolean);
-                    }
-                  }
                 }
               } else if (["pros", "優點"].some((kw) => lowerK.includes(kw))) {
                 if (val) {

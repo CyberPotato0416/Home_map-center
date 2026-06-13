@@ -174,6 +174,9 @@ async function startServer() {
     }
   });
 
+  // Serve the rentals_images directory statically at /rentals_images for reliable image display
+  app.use("/rentals_images", express.static(path.join(process.cwd(), "public", "rentals_images")));
+
   // Serve with Vite and API fallbacks
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
