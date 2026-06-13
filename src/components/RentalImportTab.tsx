@@ -25,7 +25,6 @@ interface RentalImportTabProps {
   selectedRental: RentalProperty | null;
   setSelectedRental: (r: RentalProperty | null) => void;
   targetCenter: TargetCenter;
-  desiredRent: number;
   sidebarWidth?: number;
 }
 
@@ -35,7 +34,6 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   selectedRental,
   setSelectedRental,
   targetCenter,
-  desiredRent,
   sidebarWidth = 420,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
@@ -94,7 +92,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   const pingValue = useMemo(() => {
     if (!selectedRental) return null;
     for (const [key, val] of Object.entries(selectedRental.customFields || {})) {
-      if (key.includes("坪數") || key.includes("坪") || key.toLowerCase().includes("size_ping") || key.toLowerCase().includes("ping")) {
+      if (key.includes("坪數") || key.includes("坪")) {
         const p = parseFloat(String(val));
         if (!isNaN(p) && p > 0) return p;
       }
@@ -121,9 +119,8 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
       selectedRental,
       commuteData.distToOffice,
       commuteData.minMrtDist,
-      desiredRent,
     );
-  }, [selectedRental, commuteData, desiredRent]);
+  }, [selectedRental, commuteData]);
 
   const customAttributes = useMemo(() => {
     if (!selectedRental) return [];
@@ -405,7 +402,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
             <div className="flex flex-col h-full border-l border-white/10 pl-4 w-full">
               <span className="text-[11px] text-gray-500 mb-1">備註欄位</span>
               <p className="text-[13px] text-gray-300 font-mono italic leading-relaxed break-all line-clamp-3">
-                {rpgData.notes && rpgData.notes.trim() ? `"${rpgData.notes.trim()}"` : "待審核"}
+                {rpgData.notes ? `"${rpgData.notes}"` : "待審核"}
               </p>
             </div>
           </div>

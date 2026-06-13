@@ -29,8 +29,6 @@ interface FilterExportTabProps {
   setMaxDistance: (d: number) => void;
   searchKeyword: string;
   setSearchKeyword: (k: string) => void;
-  desiredRent: number;
-  setDesiredRent: (r: number) => void;
   statusFilters?: { signing: boolean; reviewing: boolean; renting: boolean };
   setStatusFilters?: (
     f:
@@ -51,8 +49,6 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
   setMaxDistance,
   searchKeyword,
   setSearchKeyword,
-  desiredRent,
-  setDesiredRent,
   statusFilters,
   setStatusFilters,
 }) => {
@@ -940,28 +936,6 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             />
           </div>
 
-          {/* Desired Rent Input */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-mono text-gray-400 font-bold flex justify-between">
-              <span>🎯 期望月租 (Desired Rent)</span>
-              <span className="text-[#00f0ff]">
-                ${desiredRent.toLocaleString()}
-              </span>
-            </label>
-            <input
-              type="number"
-              min={5000}
-              max={25000}
-              step={500}
-              value={desiredRent}
-              onChange={(e) => setDesiredRent(parseInt(e.target.value) || 15000)}
-              className="w-full bg-[#161a25] border border-white/10 rounded-lg py-2 pl-3 pr-3 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#00f0ff]/50 transition-colors"
-            />
-            <p className="text-[10px] text-gray-500">
-              你的期望租金將用於通勤效益評估與 CP 判斷。
-            </p>
-          </div>
-
           {/* Min Size Slider */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-mono text-gray-400 font-bold flex justify-between">
@@ -988,7 +962,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             <input
               type="range"
               min="1"
-              max="10"
+              max="20"
               step="0.5"
               value={maxDistance}
               onChange={(e) => setMaxDistance(parseFloat(e.target.value))}

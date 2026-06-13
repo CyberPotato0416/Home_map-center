@@ -1,7 +1,6 @@
 import { RentData, MrtStation } from './types';
 
 export const COMPANY_COORDS: [number, number] = [25.0617, 121.5435];
-export const DEFAULT_CENTER_RENT_BASE = 17000;
 
 // Static district rent metrics as designated in specifications
 export const DISTRICT_RENT_DATA: Record<string, RentData> = {

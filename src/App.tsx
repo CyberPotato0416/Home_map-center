@@ -112,19 +112,6 @@ export default function App() {
     );
   }, [statusFilters]);
 
-  const [desiredRent, setDesiredRent] = useState<number>(() => {
-    const saved = localStorage.getItem("desired_rent");
-    if (saved) {
-      const parsed = parseInt(saved, 10);
-      if (!Number.isNaN(parsed)) return parsed;
-    }
-    return 15000;
-  });
-
-  useEffect(() => {
-    localStorage.setItem("desired_rent", String(desiredRent));
-  }, [desiredRent]);
-
   // Sub-window tabs state (1 = 地圖控制, 2 = 租金熱圖, 3 = 捷運通勤)
   const [activeTab, setActiveTab] = useState<number>(1);
   const [sidebarWidth, setSidebarWidth] = useState<number>(420);
@@ -356,7 +343,6 @@ export default function App() {
         rental,
         distToOffice * 1000,
         minMrtDist,
-        desiredRent,
       );
       const score = rpgData.totalScore;
 
@@ -437,8 +423,6 @@ export default function App() {
     maxDistance,
     searchKeyword,
     statusFilters,
-    desiredRent,
-    targetCenter,
   ]);
 
   // Handle sidebar collapse/expand map invalidation sizes sequentially for smooth render changes
@@ -628,8 +612,6 @@ export default function App() {
         setSidebarWidth={setSidebarWidth}
         isSidebarDragging={isSidebarDragging}
         setIsSidebarDragging={setIsSidebarDragging}
-        desiredRent={desiredRent}
-        setDesiredRent={setDesiredRent}
         onResizeComplete={() => {
           if (mapInstanceRef.current)
             mapInstanceRef.current.invalidateSize({ pan: false });
