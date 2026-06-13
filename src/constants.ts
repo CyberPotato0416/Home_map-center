@@ -42,7 +42,7 @@ export const MRT_LINE_COLORS: Record<string, string> = {
 
 export const MRT_STATIONS_DATA: MrtStation[] = [
   // BR 棕線
-  { name: "中山國中", coord: [25.0608, 121.5442], lines: ["BR"], desc: "鄰近築本科技，僅需步行約1-2分鐘即可抵達。" },
+  { name: "中山國中", coord: [25.0608, 121.5442], lines: ["BR"], desc: "捷運文湖線中樞，周圍辦公大樓與金融機構林立。" },
   { name: "南京復興", coord: [25.0519, 121.5441], lines: ["BR", "G"], desc: "棕線與綠線轉乘大樞紐，商務圈與優雅租賃繁榮地段。" },
   { name: "松山機場", coord: [25.0684, 121.5517], lines: ["BR"], desc: "北市空中玄關，國際與商務菁英駐足通勤點。" },
   { name: "大安", coord: [25.0329, 121.5435], lines: ["BR", "R"], desc: "高奢文教住宅特區，紅棕線交匯的核心精華生活圈。" },

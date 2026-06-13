@@ -11,9 +11,9 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { RentalProperty } from "../types";
+import { RentalProperty, TargetCenter } from "../types";
 import { calculateDistance, calculateHomeScore } from "../utils";
-import { COMPANY_COORDS, MRT_STATIONS_DATA } from "../constants";
+import { MRT_STATIONS_DATA } from "../constants";
 import { RentalImageGallery } from "./RentalImageGallery";
 import { RentalScoreBreakdown } from "./RentalScoreBreakdown";
 import { RentalAttributesGrid } from "./RentalAttributesGrid";
@@ -24,6 +24,7 @@ interface RentalImportTabProps {
   setRentals: (r: RentalProperty[]) => void;
   selectedRental: RentalProperty | null;
   setSelectedRental: (r: RentalProperty | null) => void;
+  targetCenter: TargetCenter;
   sidebarWidth?: number;
 }
 
@@ -32,6 +33,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   setRentals,
   selectedRental,
   setSelectedRental,
+  targetCenter,
   sidebarWidth = 420,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
@@ -53,8 +55,8 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
     const distToOffice = calculateDistance(
       selectedRental.lat,
       selectedRental.lng,
-      COMPANY_COORDS[0],
-      COMPANY_COORDS[1],
+      targetCenter.lat,
+      targetCenter.lng,
     );
 
     let nearestMrt = null;
@@ -347,7 +349,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
             <div className="flex flex-col gap-1">
               <span className="text-gray-500 flex items-center gap-1">
                 <Building className="w-3.5 h-3.5" />
-                距築本科技
+                距 {targetCenter.name.length > 5 ? targetCenter.name.substring(0, 5) + '...' : targetCenter.name}
               </span>
               <span className="font-mono text-gray-200 font-bold">
                 {commuteData.distToOffice < 1000

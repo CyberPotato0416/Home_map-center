@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import rawGeoJson from '../taipei_new_taipei_districts.json';
-import { COMPANY_COORDS, DISTRICT_RENT_DATA, MRT_LINE_COLORS, MRT_STATIONS_DATA, MRT_LINES_DATA } from '../constants';
+import { DISTRICT_RENT_DATA, MRT_LINE_COLORS, MRT_STATIONS_DATA, MRT_LINES_DATA } from '../constants';
 import { getRentColor } from '../utils';
 import { getMrtLinesForStation } from '../utils/mrtHelper';
-import { MrtStation } from '../types';
+import { MrtStation, TargetCenter } from '../types';
 
 interface MapInitProps {
   mapContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -22,6 +22,7 @@ interface MapInitProps {
   setSelectedStation: (s: MrtStation | null) => void;
   setMapCenterPos: (pos: { lat: number; lng: number }) => void;
   setZoomLevel: (zoom: number) => void;
+  targetCenter: TargetCenter;
 }
 
 export function useMapInit({
@@ -38,14 +39,17 @@ export function useMapInit({
   setSelectedDistrict,
   setSelectedStation,
   setMapCenterPos,
-  setZoomLevel
+  setZoomLevel,
+  targetCenter
 }: MapInitProps) {
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
+    const initialCoords: [number, number] = [targetCenter.lat, targetCenter.lng];
+
     // 1. Initialize map instance
     const map = L.map(mapContainerRef.current, {
-      center: COMPANY_COORDS,
+      center: initialCoords,
       zoom: 11,
       zoomControl: false, // Disabling standard control for custom zoom placing on bottomright
       minZoom: 9,
@@ -93,19 +97,19 @@ export function useMapInit({
       iconAnchor: [20, 20]
     });
 
-    const marker = L.marker(COMPANY_COORDS, { icon: customCompanyIcon, zIndexOffset: 10000 })
+    const marker = L.marker(initialCoords, { icon: customCompanyIcon, zIndexOffset: 10000 })
       .addTo(map)
       .bindPopup(`
         <div class="font-sans text-[13px] text-gray-200">
           <div class="flex items-center gap-1.5 font-bold text-cyan-400 text-[14px] mb-1">
             <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block animate-ping"></span>
-            築本科技股份有限公司
+            ${targetCenter.name}
           </div>
-          <div class="text-[12px] font-medium text-gray-100 mb-1">台北辦公室 (地圖中心)</div>
-          <div class="text-[11px] text-gray-400 mb-2">台北市民權東路三段 · 近捷運中山國中站</div>
+          <div class="text-[12px] font-medium text-gray-100 mb-1">設定的中心點</div>
+          <div class="text-[11px] text-gray-400 mb-2">${targetCenter.address}</div>
           <div class="pt-1.5 border-t border-white/10 flex justify-between text-[10px] font-mono text-gray-300">
-            <span>LAT: 25.0617</span>
-            <span>LNG: 121.5435</span>
+            <span>LAT: ${targetCenter.lat}</span>
+            <span>LNG: ${targetCenter.lng}</span>
           </div>
         </div>
       `, {
@@ -116,7 +120,7 @@ export function useMapInit({
     markerLayerRef.current = marker;
 
     // 5. Instantiating the custom dashed circle overlay for double-north coverage range (30km initial)
-    const circle = L.circle(COMPANY_COORDS, {
+    const circle = L.circle(initialCoords, {
       radius: radius * 1000,
       color: '#ff3860', // Light red border color
       fillColor: '#00f0ff', // Light cyan blue filling
@@ -437,4 +441,42 @@ export function useMapInit({
       }
     };
   }, []);
+
+  // Update center when targetCenter changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !markerLayerRef.current || !circleLayerRef.current) return;
+    
+    const newCoords: [number, number] = [targetCenter.lat, targetCenter.lng];
+    
+    // Update marker layer
+    markerLayerRef.current.setLatLng(newCoords);
+    markerLayerRef.current.setPopupContent(`
+        <div class="font-sans text-[13px] text-gray-200">
+          <div class="flex items-center gap-1.5 font-bold text-cyan-400 text-[14px] mb-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block animate-ping"></span>
+            ${targetCenter.name}
+          </div>
+          <div class="text-[12px] font-medium text-gray-100 mb-1">設定的中心點</div>
+          <div class="text-[11px] text-gray-400 mb-2">${targetCenter.address}</div>
+          <div class="pt-1.5 border-t border-white/10 flex justify-between text-[10px] font-mono text-gray-300">
+            <span>LAT: ${targetCenter.lat}</span>
+            <span>LNG: ${targetCenter.lng}</span>
+          </div>
+        </div>
+    `);
+
+    // Update circle layer
+    circleLayerRef.current.setLatLng(newCoords);
+
+    // Pan map smoothly to new center
+    mapInstanceRef.current.panTo(newCoords);
+    
+    // Auto-open marker popup if we move to a new center
+    setTimeout(() => {
+      if (markerLayerRef.current && mapInstanceRef.current) {
+        markerLayerRef.current.openPopup();
+      }
+    }, 500);
+
+  }, [targetCenter, mapInstanceRef, markerLayerRef, circleLayerRef]);
 }

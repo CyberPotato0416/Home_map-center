@@ -3,7 +3,7 @@ import L from "leaflet";
 import rawGeoJson from "./taipei_new_taipei_districts.json";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 
-import { MrtStation, RentalProperty } from "./types";
+import { MrtStation, RentalProperty, TargetCenter } from "./types";
 import {
   COMPANY_COORDS,
   DISTRICT_RENT_DATA,
@@ -37,6 +37,25 @@ export default function App() {
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true); // Collapsible sidebar state
   const [isInfoCardOpen, setIsInfoCardOpen] = useState<boolean>(false); // Collapsible Floating HUD card state
+
+  const [targetCenter, setTargetCenter] = useState<TargetCenter>(() => {
+    const saved = localStorage.getItem("target_center");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      name: "築本科技股份有限公司",
+      address: "台北市民權東路三段 · 近捷運中山國中站",
+      lat: COMPANY_COORDS[0],
+      lng: COMPANY_COORDS[1]
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("target_center", JSON.stringify(targetCenter));
+  }, [targetCenter]);
 
   // Heatmap GeoJSON states
   const [showHeatmap, setShowHeatmap] = useState<boolean>(true);
@@ -178,6 +197,7 @@ export default function App() {
     setSelectedStation,
     setMapCenterPos,
     setZoomLevel,
+    targetCenter,
   });
 
   // Layer visibility hook (replaces 518-580)
@@ -237,8 +257,8 @@ export default function App() {
         calculateDistance(
           rental.lat,
           rental.lng,
-          COMPANY_COORDS[0],
-          COMPANY_COORDS[1],
+          targetCenter.lat,
+          targetCenter.lng,
         ) / 1000; // in km
       if (distToOffice > maxDistance) return;
 
@@ -396,7 +416,7 @@ export default function App() {
     // Tightened the padding constraint down to [10, 10] (or [5, 5]) so it fits securely close to boundaries
     // We compute the bounds dynamically so it works seamlessly even if showCircle is toggled off
     // Note: L.latLng.toBounds takes sizeInMeters (which means diameter for a circle)
-    const bounds = L.latLng(COMPANY_COORDS).toBounds(radius * 2000);
+    const bounds = L.latLng([targetCenter.lat, targetCenter.lng]).toBounds(radius * 2000);
     mapInstanceRef.current.fitBounds(bounds, {
       padding: [40, 40],
       animate: true,
@@ -461,6 +481,7 @@ export default function App() {
 
         {/* Floating Collapsible Quick Stats HUD */}
         <FloatingHUD
+          targetCenter={targetCenter}
           radius={radius}
           isInfoCardOpen={isInfoCardOpen}
           setIsInfoCardOpen={setIsInfoCardOpen}
@@ -489,6 +510,8 @@ export default function App() {
         isSidebarOpen={isSidebarOpen}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        targetCenter={targetCenter}
+        setTargetCenter={setTargetCenter}
         radius={radius}
         setRadius={setRadius}
         showCircle={showCircle}

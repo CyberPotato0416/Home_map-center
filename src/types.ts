@@ -1,3 +1,10 @@
+export interface TargetCenter {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+}
+
 export interface SalaryInfo {
   salary: string;
   tier: string;

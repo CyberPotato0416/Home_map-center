@@ -7,7 +7,7 @@ import {
   FileSpreadsheet,
   Database,
 } from "lucide-react";
-import { RentData, MrtStation, RentalProperty } from "../types";
+import { RentData, MrtStation, RentalProperty, TargetCenter } from "../types";
 import { MapControlTab } from "./MapControlTab";
 import { RentHeatmapTab } from "./RentHeatmapTab";
 import { MrtCommuteTab } from "./MrtCommuteTab";
@@ -18,6 +18,9 @@ interface SidebarProps {
   isSidebarOpen: boolean;
   activeTab: number;
   setActiveTab: (tab: number) => void;
+
+  targetCenter: TargetCenter;
+  setTargetCenter: (t: TargetCenter) => void;
 
   // Tab 1 state
   radius: number;
@@ -81,6 +84,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isSidebarOpen,
   activeTab,
   setActiveTab,
+
+  targetCenter,
+  setTargetCenter,
 
   radius,
   setRadius,
@@ -263,6 +269,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
         {activeTab === 1 && (
           <MapControlTab
+            targetCenter={targetCenter}
+            setTargetCenter={setTargetCenter}
             radius={radius}
             setRadius={setRadius}
             showCircle={showCircle}
@@ -290,6 +298,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {activeTab === 3 && (
           <MrtCommuteTab
+            targetCenter={targetCenter}
             showHeatmap={showHeatmap}
             setShowHeatmap={setShowHeatmap}
             showMrtLines={showMrtLines}
@@ -311,6 +320,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             setRentals={setRentals}
             selectedRental={selectedRental}
             setSelectedRental={setSelectedRental}
+            targetCenter={targetCenter}
             sidebarWidth={sidebarWidth}
           />
         )}

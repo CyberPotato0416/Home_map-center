@@ -24,39 +24,18 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     setIsFailedCompletely(false);
   }, [currentImgIndex]);
 
-  // Helper to extract the 591 or dd-room ID from rental details
-  const getCleanId = () => {
-    if (rental.customFields?.original_591_id) {
-      return rental.customFields.original_591_id;
-    }
-    if (rental.customFields?.original_id) {
-      return rental.customFields.original_id;
-    }
+  let idValue = rental.customFields?.original_591_id;
+  if (!idValue && rental.link) {
+    const match = rental.link.match(/(\d{6,})/) || rental.link.match(/object\/([a-zA-Z0-9]+)/);
+    if (match) idValue = match[1];
+  }
+  if (!idValue) idValue = rental.id;
 
-    const url = rental.link || rental.customFields?.source_591_url || "";
-    const match591 = url.match(/(?:rent\.591\.com\.tw\/|detail-|id=)(\d+)/) || url.match(/\b(\d{7,9})\b/);
-    if (match591) {
-      return match591[1];
-    }
-    const matchDDRoom = url.match(/\/object\/([a-zA-Z0-9]+)/);
-    if (matchDDRoom) {
-      return matchDDRoom[1];
-    }
-
-    return rental.id.replace(/^rent_/, "");
-  };
-
-  const idValue = getCleanId();
   const currentImgUrl = rental.images && rental.images[currentImgIndex];
 
   // Robust image path resolver
   const getImgSrc = () => {
     if (!currentImgUrl) return "";
-
-    // If it has completely failed, fallback to the original remote URL as a last resort
-    if (isFailedCompletely) {
-      return currentImgUrl;
-    }
 
     // Determine target file extension
     const isPng = currentImgUrl.toLowerCase().includes(".png");
@@ -64,17 +43,13 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     const alternateExt = isPng ? "jpg" : "png";
     const activeExt = fallbackToAlternateExt ? alternateExt : primaryExt;
 
-    // If it's already a local path, use it directly (apply extension fallback if needed)
-    if (currentImgUrl.startsWith("/") || !currentImgUrl.startsWith("http")) {
-      if (fallbackToAlternateExt) {
-        if (currentImgUrl.endsWith(".jpg")) return currentImgUrl.replace(/\.jpg$/, ".png");
-        if (currentImgUrl.endsWith(".png")) return currentImgUrl.replace(/\.png$/, ".jpg");
-      }
-      return currentImgUrl;
+    const localPath = `/rentals_images/${idValue}/image_${currentImgIndex + 1}.${activeExt}`;
+
+    if (isFailedCompletely) {
+      return `https://raw.githubusercontent.com/CyberPotato0416/Home_map-center/main/public${localPath}`;
     }
 
-    // Rewrite remote URLs to local path
-    return `/rentals_images/${idValue}/image_${currentImgIndex + 1}.${activeExt}`;
+    return localPath;
   };
 
   const handleImageError = () => {

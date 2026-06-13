@@ -1,9 +1,10 @@
 import React from 'react';
 import { Train, Eye, EyeOff, Compass } from 'lucide-react';
-import { MrtStation } from '../types';
+import { MrtStation, TargetCenter } from '../types';
 import { MRT_LINE_COLORS, MRT_STATIONS_DATA } from '../constants';
 
 interface MrtCommuteTabProps {
+  targetCenter: TargetCenter;
   showHeatmap: boolean;
   setShowHeatmap: (v: boolean) => void;
   showMrtLines: boolean;
@@ -19,6 +20,7 @@ interface MrtCommuteTabProps {
 }
 
 export const MrtCommuteTab: React.FC<MrtCommuteTabProps> = ({
+  targetCenter,
   showHeatmap,
   setShowHeatmap,
   showMrtLines,
@@ -210,7 +212,7 @@ export const MrtCommuteTab: React.FC<MrtCommuteTabProps> = ({
 
         <div className="flex flex-col gap-2.5">
           <p className="text-[11px] text-gray-400 leading-normal font-sans">
-            本系統已疊加台北捷運五大核心高架與地下軌道線，分析出以下與位於<span className="text-[#00f0ff] font-semibold">中山國中站</span>旁的築本總部最緊密的通勤前哨站：
+            本系統已疊加台北捷運五大核心高架與地下軌道線。下方顯示系統內建的重點通勤前哨站（供 {targetCenter.name} 快速參考）：
           </p>
 
           <div className="flex flex-col gap-2 mt-1">

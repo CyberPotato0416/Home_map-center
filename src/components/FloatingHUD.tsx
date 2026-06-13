@@ -1,13 +1,17 @@
 import React from 'react';
 import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
 
+import { TargetCenter } from '../types';
+
 interface FloatingHUDProps {
+  targetCenter: TargetCenter;
   radius: number;
   isInfoCardOpen: boolean;
   setIsInfoCardOpen: (open: boolean) => void;
 }
 
 export const FloatingHUD: React.FC<FloatingHUDProps> = ({
+  targetCenter,
   radius,
   isInfoCardOpen,
   setIsInfoCardOpen,
@@ -37,15 +41,15 @@ export const FloatingHUD: React.FC<FloatingHUDProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-gray-100 flex items-center gap-1.5 leading-snug">
-                築本科技股份有限公司 (台北辦公室)
+                {targetCenter.name}
               </h2>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                台北市民權東路三段 · 近捷運中山國中站
+              <p className="text-[11px] text-gray-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                {targetCenter.address}
               </p>
               <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-white/5 pb-0.5">
                 <div className="flex flex-col">
                   <span className="text-[9px] text-[#9ca3af] font-mono uppercase tracking-wider">中心座標</span>
-                  <span className="text-[11px] font-mono text-[#00f0ff] font-medium">25.0617, 121.5435</span>
+                  <span className="text-[11px] font-mono text-[#00f0ff] font-medium">{targetCenter.lat.toFixed(4)}, {targetCenter.lng.toFixed(4)}</span>
                 </div>
                 <div className="h-6 w-[1px] bg-white/10"></div>
                 <div className="flex flex-col">

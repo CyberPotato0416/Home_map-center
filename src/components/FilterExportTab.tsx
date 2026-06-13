@@ -164,24 +164,24 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                       .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
                       .filter(Boolean);
                   }
-                } else if (val && images.length === 0) {
-                  // Fallback to original image URLs
-                  try {
-                    if (val.startsWith("[")) {
-                      images = JSON.parse(val.replace(/'/g, '"'));
-                    } else {
+                } else if (val && lowerK.includes("original")) {
+                  customFields[k] = val;
+                  if (images.length === 0) {
+                    try {
+                      if (val.startsWith("[")) {
+                        images = JSON.parse(val.replace(/'/g, '"'));
+                      } else {
+                        images = val
+                          .split(/[;,|]/)
+                          .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
+                          .filter(Boolean);
+                      }
+                    } catch(e) {
                       images = val
                         .split(/[;,|]/)
-                        .map((s) =>
-                          s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim(),
-                        )
+                        .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
                         .filter(Boolean);
                     }
-                  } catch (e) {
-                    images = val
-                      .split(/[;,|]/)
-                      .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
-                      .filter(Boolean);
                   }
                 }
               } else if (["pros", "優點"].some((kw) => lowerK.includes(kw))) {
@@ -376,21 +376,42 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2 mt-1">
+        <div className="grid grid-cols-3 gap-2 mt-1">
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch("/rentals_import.csv");
+                if (res.ok) {
+                  const text = await res.text();
+                  const fakeFile = new File([text], "rentals_import.csv", { type: "text/csv" });
+                  processCSV(fakeFile);
+                } else {
+                  setError("無法取得預設資料包");
+                }
+              } catch(e) {
+                setError("無法取得預設資料包");
+              }
+            }}
+            className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold py-2.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+          >
+            <Database className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">預設包</span>
+          </button>
+
           <button
             onClick={handleImportClick}
-            className="bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/30 text-[#00f0ff] text-[10px] font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/30 text-[#00f0ff] text-[10px] font-bold py-2.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
           >
-            <UploadCloud className="w-3.5 h-3.5" />
-            📥 匯入 CSV
+            <UploadCloud className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">匯入 CSV</span>
           </button>
 
           <button
             onClick={exportToCSV}
-            className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-bold py-2.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
           >
-            <DownloadCloud className="w-3.5 h-3.5" />
-            📤 匯出 CSV
+            <DownloadCloud className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">匯出 CSV</span>
           </button>
         </div>
 
