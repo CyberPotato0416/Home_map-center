@@ -88,7 +88,7 @@ export default function App() {
   );
   const [maxBudget, setMaxBudget] = useState<number>(18000);
   const [minSize, setMinSize] = useState<number>(5);
-  const [maxDistance, setMaxDistance] = useState<number>(4);
+  const [maxDistance, setMaxDistance] = useState<number>(10);
   const [searchKeyword, setSearchKeyword] = useState<string>("");
 
   const [statusFilters, setStatusFilters] = useState<{
@@ -102,7 +102,7 @@ export default function App() {
         return JSON.parse(saved);
       } catch (e) {}
     }
-    return { signing: true, reviewing: true, renting: true };
+    return { signing: false, reviewing: false, renting: true };
   });
 
   useEffect(() => {

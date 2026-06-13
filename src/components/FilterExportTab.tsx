@@ -849,7 +849,8 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           <span>⚡ 診斷比對並自動修復所有相片連結 ⚡</span>
         </button>
 
-        {/* EXISTING COCKPIT DIRECTORIES PANEL */}
+        {/* EXISTING COCKPIT DIRECTORIES PANEL (INHIBITED) */}
+        {/*
         <div className="border-t border-[#1e2330]/60 pt-2 mt-1">
           <button
             type="button"
@@ -889,6 +890,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             </div>
           )}
         </div>
+        */}
       </div>
 
       {/* Advanced Filtering Section */}
