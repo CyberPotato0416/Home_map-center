@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Layers, ChevronDown, ChevronUp } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
+
+interface LegendHUDProps {
+  showHeatmap: boolean;
+}
 
 const colorLevels = [
   { color: '#BD2C41', range: 'NT$21,000+', desc: '極高租金區 (信義)' },
@@ -18,8 +21,7 @@ const colorLevels = [
   { color: '#9DC5A6', range: '< NT$10,000', desc: '超親民租金區' },
 ];
 
-export const LegendHUD: React.FC = () => {
-  const { showHeatmap } = useAppContext();
+export const LegendHUD: React.FC<LegendHUDProps> = ({ showHeatmap }) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   if (!showHeatmap) return null;

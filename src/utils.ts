@@ -399,15 +399,6 @@ export function getRentalLocalId(rental: any): string {
     return "20390403";
   }
 
-  // "★民權東路★短租議★代收垃圾★捷運行天宮★陽台★可貓狗★" -> 21368338
-  if (
-    titleStr.includes("民權東路") ||
-    titleStr.includes("行天宮") ||
-    titleStr.includes("21368338")
-  ) {
-    return "21368338";
-  }
-
   // "北京大學遼寧街口" -> 21351251
   if (
     titleStr.includes("台北大學") ||

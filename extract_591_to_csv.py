@@ -278,10 +278,9 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
         "source_591_url": url,
         "original_591_id": house_id,
         "images": ";".join(local_images),
-        "original_image_urls": "",
+        "original_image_urls": ";".join(images),
         "mrt_nearest_name": mrt_name,
         "mrt_nearest_distance": mrt_distance,
-        "bus_nearest_name": "",
         "facilities": ";".join(facility_list),
         "聯絡人": contact_name,
         "聯絡電話": contact_phone,
@@ -302,9 +301,7 @@ def fetch_rental_details(opener, token, house_id, csv_path, log_func=print):
         "垃圾代收": trash_service,
         "租屋補助": subsidy_ok,
         "朝向": orientation,
-        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "notes": "",
-        "簽約狀態": "招租中"
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     }
     
     return row_data
@@ -319,10 +316,10 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
     fieldnames = [
         "id", "title", "price", "size_ping", "floor", "type", "address", 
         "latitude", "longitude", "source_591_url", "original_591_id", 
-        "images", "original_image_urls", "mrt_nearest_name", "mrt_nearest_distance", "bus_nearest_name", "facilities", 
+        "images", "original_image_urls", "mrt_nearest_name", "mrt_nearest_distance", "facilities", 
         "聯絡人", "聯絡電話", "Line聯絡", "聯絡人身分", "管理費", "服務費",
         "裝潢等級", "衛浴等級", "電表類型", "電費", "公用費用", "停車位", "停車費", "電梯", "洗衣機", "變頻冷氣", "垃圾代收", "租屋補助", "朝向",
-        "created_at", "notes", "簽約狀態"
+        "created_at"
     ]
     
     # 讀取既有 CSV 中的所有物件

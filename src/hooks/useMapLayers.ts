@@ -1,20 +1,31 @@
 import React, { useEffect } from 'react';
 import L from 'leaflet';
-import { useAppContext } from '../context/AppContext';
 
-export function useMapLayers() {
-  const {
-    mapInstanceRef,
-    circleLayerRef,
-    geojsonGroupRef,
-    mrtLinesGroupRef,
-    mrtStationsGroupRef,
-    radius,
-    showCircle,
-    showHeatmap,
-    showMrtLines,
-    showMrtStations,
-  } = useAppContext();
+interface MapLayersProps {
+  mapInstanceRef: React.MutableRefObject<L.Map | null>;
+  circleLayerRef: React.MutableRefObject<L.Circle | null>;
+  geojsonGroupRef: React.MutableRefObject<L.LayerGroup | null>;
+  mrtLinesGroupRef: React.MutableRefObject<L.LayerGroup | null>;
+  mrtStationsGroupRef: React.MutableRefObject<L.LayerGroup | null>;
+  radius: number;
+  showCircle: boolean;
+  showHeatmap: boolean;
+  showMrtLines: boolean;
+  showMrtStations: boolean;
+}
+
+export function useMapLayers({
+  mapInstanceRef,
+  circleLayerRef,
+  geojsonGroupRef,
+  mrtLinesGroupRef,
+  mrtStationsGroupRef,
+  radius,
+  showCircle,
+  showHeatmap,
+  showMrtLines,
+  showMrtStations,
+}: MapLayersProps) {
   // Update circle radius or show-state reactively
   useEffect(() => {
     if (!circleLayerRef.current || !mapInstanceRef.current) return;

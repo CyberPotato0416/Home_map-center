@@ -5,29 +5,43 @@ import { DISTRICT_RENT_DATA, MRT_LINE_COLORS, MRT_STATIONS_DATA, MRT_LINES_DATA 
 import { getRentColor } from '../utils';
 import { getMrtLinesForStation } from '../utils/mrtHelper';
 import { MrtStation, TargetCenter } from '../types';
-import { useAppContext } from '../context/AppContext';
+
+interface MapInitProps {
+  mapContainerRef: React.RefObject<HTMLDivElement | null>;
+  mapInstanceRef: React.MutableRefObject<L.Map | null>;
+  markerLayerRef: React.MutableRefObject<L.Marker | null>;
+  circleLayerRef: React.MutableRefObject<L.Circle | null>;
+  geojsonGroupRef: React.MutableRefObject<L.LayerGroup | null>;
+  mrtLinesGroupRef: React.MutableRefObject<L.LayerGroup | null>;
+  mrtStationsGroupRef: React.MutableRefObject<L.LayerGroup | null>;
+  rentalsGroupRef: React.MutableRefObject<L.LayerGroup | null>;
+  
+  radius: number;
+  setHoveredDistrict: (d: string | null) => void;
+  setSelectedDistrict: (d: string | null) => void;
+  setSelectedStation: (s: MrtStation | null) => void;
+  setMapCenterPos: (pos: { lat: number; lng: number }) => void;
+  setZoomLevel: (zoom: number) => void;
+  targetCenter: TargetCenter;
+}
 
 export function useMapInit({
-  mapContainerRef
-}: {
-  mapContainerRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const {
-    mapInstanceRef,
-    markerLayerRef,
-    circleLayerRef,
-    geojsonGroupRef,
-    mrtLinesGroupRef,
-    mrtStationsGroupRef,
-    rentalsGroupRef,
-    radius,
-    setHoveredDistrict,
-    setSelectedDistrict,
-    setSelectedStation,
-    setMapCenterPos,
-    setZoomLevel,
-    targetCenter
-  } = useAppContext();
+  mapContainerRef,
+  mapInstanceRef,
+  markerLayerRef,
+  circleLayerRef,
+  geojsonGroupRef,
+  mrtLinesGroupRef,
+  mrtStationsGroupRef,
+  rentalsGroupRef,
+  radius,
+  setHoveredDistrict,
+  setSelectedDistrict,
+  setSelectedStation,
+  setMapCenterPos,
+  setZoomLevel,
+  targetCenter
+}: MapInitProps) {
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 

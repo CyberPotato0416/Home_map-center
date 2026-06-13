@@ -16,24 +16,42 @@ import {
 import Papa from "papaparse";
 import { RentalProperty } from "../types";
 import { getRentalLocalId } from "../utils";
-import { useAppContext } from "../context/AppContext";
 
-export const FilterExportTab: React.FC = () => {
-  const {
-    rentals,
-    setRentals,
-    setSelectedRental,
-    maxBudget,
-    setMaxBudget,
-    minSize,
-    setMinSize,
-    maxDistance,
-    setMaxDistance,
-    searchKeyword,
-    setSearchKeyword,
-    statusFilters = { signing: true, reviewing: true, renting: true },
-    setStatusFilters = () => {},
-  } = useAppContext();
+interface FilterExportTabProps {
+  rentals: RentalProperty[];
+  setRentals: (r: RentalProperty[]) => void;
+  setSelectedRental: (r: RentalProperty | null) => void;
+  maxBudget: number;
+  setMaxBudget: (b: number) => void;
+  minSize: number;
+  setMinSize: (s: number) => void;
+  maxDistance: number;
+  setMaxDistance: (d: number) => void;
+  searchKeyword: string;
+  setSearchKeyword: (k: string) => void;
+  statusFilters?: { signing: boolean; reviewing: boolean; renting: boolean };
+  setStatusFilters?: (
+    f:
+      | { signing: boolean; reviewing: boolean; renting: boolean }
+      | ((prev: any) => any),
+  ) => void;
+}
+
+export const FilterExportTab: React.FC<FilterExportTabProps> = ({
+  rentals,
+  setRentals,
+  setSelectedRental,
+  maxBudget,
+  setMaxBudget,
+  minSize,
+  setMinSize,
+  maxDistance,
+  setMaxDistance,
+  searchKeyword,
+  setSearchKeyword,
+  statusFilters,
+  setStatusFilters,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 

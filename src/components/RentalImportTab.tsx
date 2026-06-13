@@ -18,17 +18,24 @@ import { RentalImageGallery } from "./RentalImageGallery";
 import { RentalScoreBreakdown } from "./RentalScoreBreakdown";
 import { RentalAttributesGrid } from "./RentalAttributesGrid";
 import { RentalScoreBoard } from "./RentalScoreBoard";
-import { useAppContext } from "../context/AppContext";
 
-export const RentalImportTab: React.FC = () => {
-  const {
-    rentals,
-    setRentals,
-    selectedRental,
-    setSelectedRental,
-    targetCenter,
-    sidebarWidth = 420,
-  } = useAppContext();
+interface RentalImportTabProps {
+  rentals: RentalProperty[];
+  setRentals: (r: RentalProperty[]) => void;
+  selectedRental: RentalProperty | null;
+  setSelectedRental: (r: RentalProperty | null) => void;
+  targetCenter: TargetCenter;
+  sidebarWidth?: number;
+}
+
+export const RentalImportTab: React.FC<RentalImportTabProps> = ({
+  rentals,
+  setRentals,
+  selectedRental,
+  setSelectedRental,
+  targetCenter,
+  sidebarWidth = 420,
+}) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [imageError, setImageError] = useState(false);

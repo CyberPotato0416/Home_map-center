@@ -1,14 +1,21 @@
 import React from 'react';
 import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
 
-export const FloatingHUD: React.FC = () => {
-  const {
-    targetCenter,
-    radius,
-    isInfoCardOpen,
-    setIsInfoCardOpen,
-  } = useAppContext();
+import { TargetCenter } from '../types';
+
+interface FloatingHUDProps {
+  targetCenter: TargetCenter;
+  radius: number;
+  isInfoCardOpen: boolean;
+  setIsInfoCardOpen: (open: boolean) => void;
+}
+
+export const FloatingHUD: React.FC<FloatingHUDProps> = ({
+  targetCenter,
+  radius,
+  isInfoCardOpen,
+  setIsInfoCardOpen,
+}) => {
   return (
     <div className="absolute top-4 left-4 z-[999] pointer-events-none flex flex-col gap-2 max-w-[85%] sm:max-w-md">
       {isInfoCardOpen ? (
