@@ -38,11 +38,21 @@ function download(url, dest) {
 
     execSync(`npx -y extract-zip repo.zip "${outDir}"`, {stdio: 'inherit'});
     
-    console.log("Copying CSV...");
+    console.log("Copying CSV & Excel...");
     const srcCsv = path.join(outDir, 'Home_map-center-main', 'public', 'rentals_import.csv');
     const destCsv = path.join(process.cwd(), 'public', 'rentals_import.csv');
     if (fs.existsSync(srcCsv)) {
         fs.copyFileSync(srcCsv, destCsv);
+    }
+    const srcXlsm = path.join(outDir, 'Home_map-center-main', 'public', 'rentals_import.xlsm');
+    const destXlsm = path.join(process.cwd(), 'public', 'rentals_import.xlsm');
+    if (fs.existsSync(srcXlsm)) {
+        fs.copyFileSync(srcXlsm, destXlsm);
+    }
+    const srcXlsx = path.join(outDir, 'Home_map-center-main', 'public', 'rentals_import.xlsx');
+    const destXlsx = path.join(process.cwd(), 'public', 'rentals_import.xlsx');
+    if (fs.existsSync(srcXlsx)) {
+        fs.copyFileSync(srcXlsx, destXlsx);
     }
     
     console.log("Copying Images...");

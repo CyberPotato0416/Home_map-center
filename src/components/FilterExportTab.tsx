@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { RentalProperty } from "../types";
 import { getRentalLocalId } from "../utils";
 
@@ -355,7 +356,223 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
     }
   };
 
-  const processCSV = async (file: File) => {
+  const parseAndSaveRentals = (rows: any[], fields: string[], serverFolders: any[]) => {
+    try {
+      if (!rows || rows.length === 0) {
+        setError("檔案內容為空");
+        return;
+      }
+
+      const parsedRentals: RentalProperty[] = [];
+      const titleKeyFromHeader = fields.length > 1 ? fields[1] : null;
+
+      rows.forEach((row, index) => {
+        const keys = Object.keys(row);
+
+        // Core mappers
+        let id = "";
+        let lat = 0;
+        let lng = 0;
+        let price = 0;
+        let title = titleKeyFromHeader
+          ? String(row[titleKeyFromHeader] || "").trim()
+          : "";
+        let link = "";
+        let images: string[] = [];
+        let pros: string[] = [];
+        let cons: string[] = [];
+        const customFields: Record<string, string> = {};
+
+        keys.forEach((k) => {
+          const lowerK = k.toLowerCase().trim();
+          const val = String(row[k] || "");
+
+          if (["id"].includes(lowerK) && val) {
+            id = val;
+          } else if (
+            ["lat", "latitude", "緯度"].some((kw) => lowerK.includes(kw))
+          ) {
+            lat = parseFloat(val);
+          } else if (
+            ["lng", "longitude", "long", "經度"].some((kw) =>
+              lowerK.includes(kw),
+            )
+          ) {
+            lng = parseFloat(val);
+          } else if (
+            ["price", "rent", "租金", "價格"].some((kw) =>
+              lowerK.includes(kw),
+            )
+          ) {
+            price = parseInt(val.replace(/[^0-9]/g, ""), 10);
+          } else if (k === titleKeyFromHeader) {
+            // Already used as primary title source
+          } else if (
+            !title &&
+            ["title", "name", "名稱", "標題", "物件"].some(
+              (kw) =>
+                lowerK.includes(kw) &&
+                !lowerK.includes("狀態") &&
+                !lowerK.includes("裝潢"),
+            )
+          ) {
+            title = val;
+          } else if (
+            lowerK === "source_591_url" ||
+            lowerK === "url" ||
+            lowerK === "link" ||
+            lowerK === "網址" ||
+            lowerK === "連結"
+          ) {
+            if (!link || lowerK === "source_591_url") {
+              link = val;
+            }
+          } else if (
+            ["image", "img", "pic", "photo", "照片", "圖片", "cover"].some(
+              (kw) => lowerK.includes(kw),
+            )
+          ) {
+            if (val && !lowerK.includes("original")) {
+              // Prefer local images (without 'original' in key)
+              try {
+                if (val.startsWith("[")) {
+                  images = JSON.parse(val.replace(/'/g, '"'));
+                } else {
+                  images = val
+                    .split(/[;,|]/)
+                    .map((s) =>
+                      s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim(),
+                    )
+                    .filter(Boolean);
+                }
+              } catch (e) {
+                images = val
+                  .split(/[;,|]/)
+                  .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
+                  .filter(Boolean);
+              }
+            } else if (val && lowerK.includes("original")) {
+              customFields[k] = val;
+            }
+          } else if (["pros", "優點"].some((kw) => lowerK.includes(kw))) {
+            if (val) {
+              pros = val
+                .split(/[;,]/)
+                .map((s) => s.trim())
+                .filter(Boolean);
+            }
+          } else if (["cons", "缺點"].some((kw) => lowerK.includes(kw))) {
+            if (val) {
+              cons = val
+                .split(/[;,]/)
+                .map((s) => s.trim())
+                .filter(Boolean);
+            }
+          } else {
+            // Keep everything else as custom dynamic fields
+            customFields[k] = val;
+          }
+        });
+
+        // Only add if we have some coords
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          // Fallback title
+          if (!title) title = `Property ${index + 1}`;
+          
+          const tempRental: RentalProperty = {
+            id: id || `rent_${Date.now()}_${index}`,
+            lat,
+            lng,
+            price: isNaN(price) ? 0 : price,
+            title,
+            link,
+            images,
+            pros,
+            cons,
+            customFields,
+          };
+
+          // AUTO-HEAL: Immediately resolve best images using server folders & files
+          const idValueForHeal = getRentalLocalId(tempRental);
+          if (idValueForHeal && serverFolders.length > 0) {
+            const folderMatch = serverFolders.find(
+              (f) => String(f.name).toLowerCase().trim() === String(idValueForHeal).toLowerCase().trim()
+            );
+            if (folderMatch && folderMatch.count > 0) {
+              const actualFiles = folderMatch.files || [];
+              if (actualFiles.length > 0) {
+                tempRental.images = actualFiles.map((file: string) => `/rentals_images/${idValueForHeal}/${file}`);
+              } else {
+                tempRental.images = Array.from(
+                  { length: folderMatch.count },
+                  (_, i) => `/rentals_images/${idValueForHeal}/image_${i + 1}.jpg`
+                );
+              }
+            }
+          }
+
+          parsedRentals.push(tempRental);
+        }
+      });
+
+      if (parsedRentals.length > 0) {
+        setRentals((prevRentals) => {
+          const updatedRentals = [...prevRentals];
+          let newlyAdded = 0;
+          let updatedCount = 0;
+          let deletedCount = 0;
+
+          parsedRentals.forEach((newRental) => {
+            const existingIndex = updatedRentals.findIndex(
+              (r) =>
+                r.id === newRental.id ||
+                (r.link && r.link === newRental.link) ||
+                (r.lat === newRental.lat && r.lng === newRental.lng),
+            );
+
+            if (newRental.price === 0) {
+              // Price 0 means we should hide/delete this rental
+              if (existingIndex >= 0) {
+                updatedRentals.splice(existingIndex, 1);
+                deletedCount++;
+              }
+            } else {
+              if (existingIndex >= 0) {
+                updatedRentals[existingIndex] = newRental; // Update existing
+                updatedCount++;
+              } else {
+                updatedRentals.push(newRental); // Add new
+                newlyAdded++;
+              }
+            }
+          });
+
+          // Persist locally
+          localStorage.setItem(
+            "my_rental_pins",
+            JSON.stringify(updatedRentals),
+          );
+
+          let msg = `成功匯入！目前共有 ${updatedRentals.length} 筆物件。\n`;
+          if (newlyAdded > 0) msg += `- 新增: ${newlyAdded} 筆\n`;
+          if (updatedCount > 0) msg += `- 更新: ${updatedCount} 筆\n`;
+          if (deletedCount > 0)
+            msg += `- 刪除 (因租金為0): ${deletedCount} 筆\n`;
+
+          alert(msg);
+          return updatedRentals;
+        });
+      } else {
+        setError(
+          "無法解析出任何有效的座標點位。請確保包含「緯度」與「經度」欄位。",
+        );
+      }
+    } catch (e: any) {
+      setError(`解析錯誤: ${e.message || "格式有誤"}`);
+    }
+  };
+
+  const processImportFile = async (file: File) => {
     setError(null);
     let serverFolders: any[] = [];
     try {
@@ -370,239 +587,58 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
       console.error("Failed to pre-fetch rentals images status during transition", e);
     }
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        try {
+    const isCSV = file.name.toLowerCase().endsWith(".csv");
+    if (isCSV) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
           const rows = results.data as any[];
+          const fields = results.meta.fields || [];
+          parseAndSaveRentals(rows, fields, serverFolders);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        },
+        error: (error) => {
+          setError(`CSV 解析失敗: ${error.message}`);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        },
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" }) as any[];
+          
           if (!rows || rows.length === 0) {
-            setError("CSV 檔案為空");
+            setError("Excel 檔案為空或無法讀取首張工作表");
             return;
           }
-
-          const parsedRentals: RentalProperty[] = [];
-          const fields = results.meta.fields || [];
-          const titleKeyFromHeader = fields.length > 1 ? fields[1] : null;
-
-          rows.forEach((row, index) => {
-            const keys = Object.keys(row);
-
-            // Core mappers
-            let id = "";
-            let lat = 0;
-            let lng = 0;
-            let price = 0;
-            let title = titleKeyFromHeader
-              ? String(row[titleKeyFromHeader] || "").trim()
-              : "";
-            let link = "";
-            let images: string[] = [];
-            let pros: string[] = [];
-            let cons: string[] = [];
-            const customFields: Record<string, string> = {};
-
-            keys.forEach((k) => {
-              const lowerK = k.toLowerCase().trim();
-              const val = String(row[k] || "");
-
-              if (["id"].includes(lowerK) && val) {
-                id = val;
-              } else if (
-                ["lat", "latitude", "緯度"].some((kw) => lowerK.includes(kw))
-              ) {
-                lat = parseFloat(val);
-              } else if (
-                ["lng", "longitude", "long", "經度"].some((kw) =>
-                  lowerK.includes(kw),
-                )
-              ) {
-                lng = parseFloat(val);
-              } else if (
-                ["price", "rent", "租金", "價格"].some((kw) =>
-                  lowerK.includes(kw),
-                )
-              ) {
-                price = parseInt(val.replace(/[^0-9]/g, ""), 10);
-              } else if (k === titleKeyFromHeader) {
-                // Already used as primary title source
-              } else if (
-                !title &&
-                ["title", "name", "名稱", "標題", "物件"].some(
-                  (kw) =>
-                    lowerK.includes(kw) &&
-                    !lowerK.includes("狀態") &&
-                    !lowerK.includes("裝潢"),
-                )
-              ) {
-                title = val;
-              } else if (
-                lowerK === "source_591_url" ||
-                lowerK === "url" ||
-                lowerK === "link" ||
-                lowerK === "網址" ||
-                lowerK === "連結"
-              ) {
-                if (!link || lowerK === "source_591_url") {
-                  link = val;
-                }
-              } else if (
-                ["image", "img", "pic", "photo", "照片", "圖片", "cover"].some(
-                  (kw) => lowerK.includes(kw),
-                )
-              ) {
-                if (val && !lowerK.includes("original")) {
-                  // Prefer local images (without 'original' in key)
-                  try {
-                    if (val.startsWith("[")) {
-                      images = JSON.parse(val.replace(/'/g, '"'));
-                    } else {
-                      images = val
-                        .split(/[;,|]/)
-                        .map((s) =>
-                          s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim(),
-                        )
-                        .filter(Boolean);
-                    }
-                  } catch (e) {
-                    images = val
-                      .split(/[;,|]/)
-                      .map((s) => s.replace(/^\[?['"]?|['"]?\]?$/g, "").trim())
-                      .filter(Boolean);
-                  }
-                } else if (val && lowerK.includes("original")) {
-                  customFields[k] = val;
-                }
-              } else if (["pros", "優點"].some((kw) => lowerK.includes(kw))) {
-                if (val) {
-                  pros = val
-                    .split(/[;,]/)
-                    .map((s) => s.trim())
-                    .filter(Boolean);
-                }
-              } else if (["cons", "缺點"].some((kw) => lowerK.includes(kw))) {
-                if (val) {
-                  cons = val
-                    .split(/[;,]/)
-                    .map((s) => s.trim())
-                    .filter(Boolean);
-                }
-              } else {
-                // Keep everything else as custom dynamic fields
-                customFields[k] = val;
-              }
-            });
-
-            // Only add if we have some coords
-            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-              // Fallback title
-              if (!title) title = `Property ${index + 1}`;
-              
-              const tempRental: RentalProperty = {
-                id: id || `rent_${Date.now()}_${index}`,
-                lat,
-                lng,
-                price: isNaN(price) ? 0 : price,
-                title,
-                link,
-                images,
-                pros,
-                cons,
-                customFields,
-              };
-
-              // AUTO-HEAL: Immediately resolve best images using server folders & files
-              const idValueForHeal = getRentalLocalId(tempRental);
-              if (idValueForHeal && serverFolders.length > 0) {
-                const folderMatch = serverFolders.find(
-                  (f) => String(f.name).toLowerCase().trim() === String(idValueForHeal).toLowerCase().trim()
-                );
-                if (folderMatch && folderMatch.count > 0) {
-                  const actualFiles = folderMatch.files || [];
-                  if (actualFiles.length > 0) {
-                    tempRental.images = actualFiles.map((file: string) => `/rentals_images/${idValueForHeal}/${file}`);
-                  } else {
-                    tempRental.images = Array.from(
-                      { length: folderMatch.count },
-                      (_, i) => `/rentals_images/${idValueForHeal}/image_${i + 1}.jpg`
-                    );
-                  }
-                }
-              }
-
-              parsedRentals.push(tempRental);
-            }
-          });
-
-          if (parsedRentals.length > 0) {
-            setRentals((prevRentals) => {
-              const updatedRentals = [...prevRentals];
-              let newlyAdded = 0;
-              let updatedCount = 0;
-              let deletedCount = 0;
-
-              parsedRentals.forEach((newRental) => {
-                const existingIndex = updatedRentals.findIndex(
-                  (r) =>
-                    r.id === newRental.id ||
-                    (r.link && r.link === newRental.link) ||
-                    (r.lat === newRental.lat && r.lng === newRental.lng),
-                );
-
-                if (newRental.price === 0) {
-                  // Price 0 means we should hide/delete this rental
-                  if (existingIndex >= 0) {
-                    updatedRentals.splice(existingIndex, 1);
-                    deletedCount++;
-                  }
-                } else {
-                  if (existingIndex >= 0) {
-                    updatedRentals[existingIndex] = newRental; // Update existing
-                    updatedCount++;
-                  } else {
-                    updatedRentals.push(newRental); // Add new
-                    newlyAdded++;
-                  }
-                }
-              });
-
-              // Persist locally
-              localStorage.setItem(
-                "my_rental_pins",
-                JSON.stringify(updatedRentals),
-              );
-
-              let msg = `成功匯入！目前共有 ${updatedRentals.length} 筆物件。\n`;
-              if (newlyAdded > 0) msg += `- 新增: ${newlyAdded} 筆\n`;
-              if (updatedCount > 0) msg += `- 更新: ${updatedCount} 筆\n`;
-              if (deletedCount > 0)
-                msg += `- 刪除 (因租金為0): ${deletedCount} 筆\n`;
-
-              alert(msg);
-              return updatedRentals;
-            });
-          } else {
-            setError(
-              "無法解析出任何有效的座標點位。請確保包含「緯度」與「經度」欄位。",
-            );
-          }
+          
+          // Determine fields from Excel keys
+          const fields = Object.keys(rows[0]);
+          parseAndSaveRentals(rows, fields, serverFolders);
         } catch (e: any) {
-          setError(`解析錯誤: ${e.message || "格式有誤"}`);
+          setError(`Excel 解析錯誤: ${e.message || "格式有誤"}`);
+        } finally {
+          if (fileInputRef.current) fileInputRef.current.value = "";
         }
-
-        // Clear input to allow re-upload
+      };
+      reader.onerror = () => {
+        setError("讀取 Excel 檔案時發生錯誤");
         if (fileInputRef.current) fileInputRef.current.value = "";
-      },
-      error: (error) => {
-        setError(`CSV 解析失敗: ${error.message}`);
-      },
-    });
+      };
+      reader.readAsArrayBuffer(file);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      processCSV(file);
+      processImportFile(file);
     }
   };
 
@@ -661,7 +697,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
     <div className="flex flex-col gap-4 animate-fade-in">
       <input
         type="file"
-        accept=".csv"
+        accept=".csv,.xlsx,.xlsm"
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
@@ -673,7 +709,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
 
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
           <Database className="w-4 h-4 text-purple-400" />
-          資料備份與匯出 (CSV)
+          資料備份與匯出 (CSV / Excel)
         </div>
         <p className="text-[10px] text-gray-500 leading-relaxed font-sans">
           您可以在此導出目前地圖上的所有租屋資料，也可以重新匯入新的 591
@@ -691,13 +727,27 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           <button
             onClick={async () => {
               try {
-                const res = await fetch("/rentals_import.csv");
-                if (res.ok) {
-                  const text = await res.text();
-                  const fakeFile = new File([text], "rentals_import.csv", { type: "text/csv" });
-                  processCSV(fakeFile);
+                const resXlsm = await fetch("/rentals_import.xlsm");
+                if (resXlsm.ok) {
+                  const buffer = await resXlsm.arrayBuffer();
+                  const fakeFile = new File([buffer], "rentals_import.xlsm", { type: "application/octet-stream" });
+                  processImportFile(fakeFile);
                 } else {
-                  setError("無法取得預設資料包");
+                  const resXlsx = await fetch("/rentals_import.xlsx");
+                  if (resXlsx.ok) {
+                    const buffer = await resXlsx.arrayBuffer();
+                    const fakeFile = new File([buffer], "rentals_import.xlsx", { type: "application/octet-stream" });
+                    processImportFile(fakeFile);
+                  } else {
+                    const resCsv = await fetch("/rentals_import.csv");
+                    if (resCsv.ok) {
+                      const text = await resCsv.text();
+                      const fakeFile = new File([text], "rentals_import.csv", { type: "text/csv" });
+                      processImportFile(fakeFile);
+                    } else {
+                      setError("無法取得預設資料包");
+                    }
+                  }
                 }
               } catch(e) {
                 setError("無法取得預設資料包");

@@ -16,6 +16,7 @@ import ssl
 import http.cookiejar
 import re
 import csv
+import openpyxl
 import sys
 import os
 from datetime import datetime, timezone
@@ -27,8 +28,8 @@ from tkinter import ttk, messagebox, filedialog
 
 # Vite 專案的 public 目錄（下載的照片放在此處，Vite 本地伺服器才能正確讀取）
 VITE_PUBLIC_DIR = r"H:\645_Home_map-center\public"
-# CSV 輸出路徑（CSV 也放在專案目錄下，方便一起管理）
-DEFAULT_CSV = r"H:\645_Home_map-center\public\rentals_import.csv"
+# CSV 輸出路徑（改為 XLSM 格式）
+DEFAULT_CSV = r"H:\645_Home_map-center\public\rentals_import.xlsm"
 
 # 設定標準輸出編碼
 sys.stdout.reconfigure(encoding='utf-8')
@@ -323,21 +324,33 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
         "created_at", "notes", "簽約狀態"
     ]
     
-    # 讀取既有 CSV 中的所有物件
+    # 讀取既有 Excel 中的所有物件
     existing_rows = []
     id_to_row = {}
     if file_exists:
         try:
-            with open(csv_path, "r", newline='', encoding='utf-8-sig') as f:
-                reader = csv.DictReader(f)
-                for existing_row in reader:
-                    row_dict = dict(existing_row)
-                    existing_rows.append(row_dict)
-                    eid = row_dict.get("original_591_id", "").strip()
-                    if eid:
-                        id_to_row[eid] = row_dict
+            wb = openpyxl.load_workbook(csv_path, read_only=True, keep_vba=True)
+            sheet = wb.worksheets[0]
+            header = None
+            for row in sheet.iter_rows(values_only=True):
+                if not header:
+                    header = [str(cell) for cell in row]
+                    continue
+                row_dict = {}
+                for idx, cell_val in enumerate(row):
+                    if idx < len(header):
+                        row_dict[header[idx]] = "" if cell_val is None else str(cell_val)
+                # 確保 fieldnames 中所有的欄位都在字典中，避免 KeyValue 缺失
+                for field in fieldnames:
+                    if field not in row_dict:
+                        row_dict[field] = ""
+                existing_rows.append(row_dict)
+                eid = row_dict.get("original_591_id", "").strip()
+                if eid:
+                    id_to_row[eid] = row_dict
+            wb.close()
         except Exception as e:
-            log_func(f"  [提示] 讀取既有 CSV 失敗: {e}")
+            log_func(f"  [提示] 讀取既有 Excel 失敗: {e}")
 
     success_count = 0
     skip_count = 0
@@ -426,18 +439,29 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
             finish_callback(0)
         return
         
-    log_func(f"\n💾 正在寫入 CSV 檔案: {csv_path} ...")
+    log_func(f"\n💾 正在寫入 Excel 活頁簿: {csv_path} ...")
     try:
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-        # 🔑 一律重新寫入整個檔案，使用 utf-8-sig 確保 Excel 中文不亂碼
-        with open(csv_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for row in existing_rows:
-                # 只寫入 fieldnames 中有的欄位，防範未來欄位有髒資料
-                row_to_write = {k: row.get(k, "") for k in fieldnames}
-                writer.writerow(row_to_write)
-        log_func("  💾 CSV 檔案更新完成！")
+        if os.path.exists(csv_path):
+            wb = openpyxl.load_workbook(csv_path, keep_vba=True)
+            sheet = wb.worksheets[0]
+            sheet.delete_rows(1, sheet.max_row + 10)  # 清除原本的所有列
+        else:
+            wb = openpyxl.Workbook()
+            sheet = wb.worksheets[0]
+            sheet.title = "Sheet1"
+            
+        # 寫入標頭
+        sheet.append(fieldnames)
+        
+        # 寫入資料
+        for row in existing_rows:
+            row_to_write = [row.get(k, "") for k in fieldnames]
+            sheet.append(row_to_write)
+            
+        wb.save(csv_path)
+        wb.close()
+        log_func("  💾 Excel 檔案更新完成！")
         log_func(f"\n🎉 任務結束！成功變更 {success_count} 筆，略過 {skip_count} 筆物件。")
         if finish_callback:
             finish_callback(success_count)
