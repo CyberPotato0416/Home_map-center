@@ -189,22 +189,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onMouseDown={startResizing}
         />
       )}
-      {/* BRAND HEADER & LOGO */}
-      <div className="p-5 border-b border-[#1e2330] bg-[#0c0d13]/70 backdrop-blur-sm shrink-0 selection:bg-cyan-500/30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#005fff] flex items-center justify-center shadow-lg shadow-[#00f0ff]/20 shrink-0">
-            <Sword className="w-5 h-5 text-gray-900 font-bold" />
-          </div>
-          <div>
-            <div className="text-xs font-mono text-cyan-400 tracking-wider font-extrabold uppercase">
-              592 Premium
-            </div>
-            <h1 className="text-base font-bold text-gray-100 tracking-tight leading-tight">
-              租屋通勤分析系統
-            </h1>
-          </div>
-        </div>
-      </div>
 
       {/* CYBERPUNK CHRONO-TAB NAVIGATION */}
       <div className="flex bg-[#0c0d12] border-b border-[#1e2330] shrink-0 sticky top-0 z-30 select-none">

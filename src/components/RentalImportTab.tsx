@@ -40,6 +40,41 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [imageError, setImageError] = useState(false);
 
+  const [isBaseStatsOpen, setIsBaseStatsOpen] = useState(() => {
+    const saved = localStorage.getItem("rent_map_base_stats_open");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [isBuffsDebuffsOpen, setIsBuffsDebuffsOpen] = useState(() => {
+    const saved = localStorage.getItem("rent_map_buffs_debuffs_open");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [isCustomAttrsOpen, setIsCustomAttrsOpen] = useState(() => {
+    const saved = localStorage.getItem("rent_map_custom_attrs_open");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const toggleBaseStats = () => {
+    setIsBaseStatsOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("rent_map_base_stats_open", String(next));
+      return next;
+    });
+  };
+  const toggleBuffsDebuffs = () => {
+    setIsBuffsDebuffsOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("rent_map_buffs_debuffs_open", String(next));
+      return next;
+    });
+  };
+  const toggleCustomAttrs = () => {
+    setIsCustomAttrsOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("rent_map_custom_attrs_open", String(next));
+      return next;
+    });
+  };
+
   useEffect(() => {
     setCurrentImgIndex(0);
     setIsDetailsOpen(true);
@@ -149,12 +184,20 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
     // 1. type 同一列，放 original_591_id
     const _type = popField(["type", "型態"]);
     const _originId = popField(["original_591_id"]);
+    const _signStatus = popField(["簽約狀態"]);
 
     const finalType = _type || selectedRental.type;
     if (finalType || _originId) {
       attrList.push({
         key: "型態 / 591 ID",
         val: `${finalType || "-"}${_originId ? ` / ${_originId}` : ""}`,
+      });
+    }
+
+    if (_signStatus) {
+      attrList.push({
+        key: "簽約狀態",
+        val: _signStatus,
       });
     }
 
@@ -234,7 +277,6 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
         "created",
         "notes",
         "備註",
-        "簽約狀態",
       ].some((k) => key.toLowerCase().includes(k));
       attrList.push({ key, val, isFullWidth });
     });
@@ -280,37 +322,6 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
         >
           {/* 1. Header (Rarity & Title) */}
           <div className="flex flex-col gap-1 border-b border-white/10 pb-3">
-            <div className="flex items-center gap-2">
-              <span
-                className="px-1.5 py-0.5 text-[10px] font-bold font-mono rounded"
-                style={{
-                  backgroundColor: rarityColor,
-                  color:
-                    rarityColor === "#1eff00" || rarityColor === "#ffb800"
-                      ? "#000"
-                      : "#fff",
-                }}
-              >
-                {rarityName}
-              </span>
-              <span className="text-[10px] font-mono text-gray-500">
-                {selectedRental.type || "未分類"} | iLvl: {selectedRental.id}
-              </span>
-            </div>
-            <h3
-              className="text-[16px] font-bold text-gray-100 leading-snug"
-              style={{ color: rarityColor }}
-            >
-              {selectedRental.title}
-            </h3>
-            <div className="flex items-baseline gap-2 font-mono mt-1">
-              <span className="text-[#00f0ff] font-bold text-[24px] tracking-tight">
-                NT$ {selectedRental.price.toLocaleString()}
-              </span>
-              <span className="text-[12px] text-gray-500 font-normal">
-                / 月
-              </span>
-            </div>
             {(() => {
               let displayLink = selectedRental.link || "";
               if (
@@ -329,17 +340,40 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
                 displayLink = selectedRental.source_591_url;
               }
 
-              return displayLink ? (
-                <a
-                  href={displayLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-[11px] underline underline-offset-2 w-fit mt-1"
+              if (displayLink) {
+                return (
+                  <a
+                    href={displayLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:underline cursor-pointer w-fit block group"
+                  >
+                    <h3
+                      className="text-[16px] font-bold leading-snug group-hover:text-cyan-400 transition-colors"
+                      style={{ color: rarityColor }}
+                    >
+                      {selectedRental.title} <span className="text-[12px] opacity-75">🔗</span>
+                    </h3>
+                  </a>
+                );
+              }
+              return (
+                <h3
+                  className="text-[16px] font-bold text-gray-100 leading-snug"
+                  style={{ color: rarityColor }}
                 >
-                  🔗 前往 591 原始網頁
-                </a>
-              ) : null;
+                  {selectedRental.title}
+                </h3>
+              );
             })()}
+            <div className="flex items-baseline gap-2 font-mono mt-1">
+              <span className="text-[#00f0ff] font-bold text-[24px] tracking-tight">
+                NT$ {selectedRental.price.toLocaleString()}
+              </span>
+              <span className="text-[12px] text-gray-500 font-normal">
+                / 月
+              </span>
+            </div>
           </div>
 
           <RentalImageGallery rental={selectedRental} />
@@ -407,23 +441,110 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
             </div>
           </div>
 
-          {/* 4. Core Stats Progress Bars */}
-          <RentalScoreBoard
-            rpgData={rpgData}
-            commuteDistToOffice={commuteData.distToOffice}
-            pingValue={pingValue}
-            price={selectedRental.price}
-            floor={selectedRental.floor}
-            rarityColor={rarityColor}
-          />
+          {/* Collapsible Details Sections Container */}
+          <div className="flex flex-col border-t border-white/5 mt-1">
+            {/* 1. 【基礎性能分析】 */}
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={toggleBaseStats}
+                className="w-full flex items-center gap-1.5 text-left focus:outline-none cursor-pointer group py-2.5 border-b border-white/5 select-none text-[12px] font-bold text-gray-400 group-hover:text-gray-200 transition-colors"
+              >
+                <span className="text-[9px] text-gray-500 group-hover:text-[#00f0ff] transition-colors font-mono">
+                  {isBaseStatsOpen ? "▼" : "▶"}
+                </span>
+                <span>【基礎性能分析】</span>
+              </button>
+              {isBaseStatsOpen && (
+                <div className="animate-fade-in py-3 border-b border-white/5">
+                  <RentalScoreBoard
+                    rpgData={rpgData}
+                    commuteDistToOffice={commuteData.distToOffice}
+                    pingValue={pingValue}
+                    price={selectedRental.price}
+                    floor={selectedRental.floor}
+                    rarityColor={rarityColor}
+                  />
+                </div>
+              )}
+            </div>
 
-          <RentalScoreBreakdown breakdown={rpgData.breakdown} />
+            {/* 2. Buffs & Debuffs */}
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={toggleBuffsDebuffs}
+                className="w-full flex items-center gap-1.5 text-left focus:outline-none cursor-pointer group py-2.5 border-b border-white/5 select-none text-[12px] font-bold text-gray-400 group-hover:text-gray-200 transition-colors"
+              >
+                <span className="text-[9px] text-gray-500 group-hover:text-[#00f0ff] transition-colors font-mono">
+                  {isBuffsDebuffsOpen ? "▼" : "▶"}
+                </span>
+                <span>【屬性增幅 (Buffs)】+【屬性減益 (Debuffs)】</span>
+              </button>
+              {isBuffsDebuffsOpen && (
+                <div className="animate-fade-in py-3 border-b border-white/5">
+                  <RentalScoreBreakdown breakdown={rpgData.breakdown} />
+                </div>
+              )}
+            </div>
 
-          {/* 7. Dynamic Custom Attributes Grid */}
-          <RentalAttributesGrid
-            attributes={customAttributes}
-            sidebarWidth={sidebarWidth}
-          />
+            {/* 3. 附加屬性 */}
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={toggleCustomAttrs}
+                className="w-full flex items-center gap-1.5 text-left focus:outline-none cursor-pointer group py-2.5 border-b border-white/5 select-none text-[12px] font-bold text-gray-400 group-hover:text-gray-200 transition-colors"
+              >
+                <span className="text-[9px] text-gray-500 group-hover:text-[#00f0ff] transition-colors font-mono">
+                  {isCustomAttrsOpen ? "▼" : "▶"}
+                </span>
+                <span>附加屬性</span>
+              </button>
+              {isCustomAttrsOpen && (
+                <div className="animate-fade-in py-3 border-b border-white/5">
+                  <RentalAttributesGrid
+                    attributes={customAttributes}
+                    sidebarWidth={sidebarWidth}
+                  >
+                    {/* 通勤效益 box */}
+                    <div className="mt-4 flex flex-col rounded-xl border border-white/10 bg-[#081118] p-3 text-[12px]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-gray-300 font-bold">通勤效益</span>
+                        <span
+                          className={`font-bold ${
+                            rpgData.commuteAnalysis.netBenefit >= 0
+                              ? 'text-emerald-400'
+                              : 'text-rose-400'
+                          } text-[11px]`}
+                        >
+                          {rpgData.commuteAnalysis.cpLabel}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-gray-400 leading-tight">
+                        預估每月通勤成本：{Math.round(rpgData.commuteAnalysis.monthlyTimeCost).toLocaleString()} 元
+                      </div>
+                      <div className="mt-1 text-gray-400 leading-tight">
+                        租金差價：{Math.round(rpgData.commuteAnalysis.rentSaving).toLocaleString()} 元
+                      </div>
+                      <div className="mt-1 text-gray-400 leading-tight">
+                        將月淨效益向上調整到 400 元級距：
+                        {rpgData.commuteAnalysis.benefitLevel > 0
+                          ? `${rpgData.commuteAnalysis.roundedNetBenefit.toLocaleString()} 元，等級 ${rpgData.commuteAnalysis.benefitLevel}`
+                          : '無正向淨效益'}
+                      </div>
+                      <div className="mt-1 text-gray-200 font-semibold leading-tight">
+                        月淨效益：{rpgData.commuteAnalysis.netBenefit >= 0 ? '省 ' : '虧 '}
+                        {Math.abs(Math.round(rpgData.commuteAnalysis.netBenefit)).toLocaleString()} 元
+                      </div>
+                    </div>
+                  </RentalAttributesGrid>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="text-[9px] text-gray-800 font-mono text-right mt-1 select-none opacity-40">
+            {selectedRental.type || "未分類"} | iLvl: {selectedRental.id}
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center p-8 bg-gray-900/30 rounded-xl border border-white/5 border-dashed">

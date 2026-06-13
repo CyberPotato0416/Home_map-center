@@ -39,11 +39,7 @@ export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
   };
 
   return (
-    <div className="pt-2">
-      <h4 className="text-[12px] font-bold text-gray-400 mb-3 border-b border-white/10 pb-1">
-        【基礎性能分析】
-      </h4>
-      <div className="grid grid-cols-1 gap-3">
+    <div className="grid grid-cols-1 gap-3 pt-1">
         <div className="flex flex-col">
           <div className="flex justify-between items-end text-[12px] font-mono">
             <span className="text-gray-300">通勤力</span>
@@ -74,38 +70,6 @@ export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
           </div>
           {renderBlocks(rpgData.budgetScore, 10, rarityColor)}
         </div>
-
-        <div className="flex flex-col rounded-xl border border-white/10 bg-[#081118] p-3 text-[12px]">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-gray-300">通勤效益</span>
-            <span
-              className={`font-bold ${
-                rpgData.commuteAnalysis.netBenefit >= 0
-                  ? 'text-emerald-300'
-                  : 'text-rose-300'
-              } text-[11px]`}
-            >
-              {rpgData.commuteAnalysis.cpLabel}
-            </span>
-          </div>
-          <div className="mt-2 text-gray-400 leading-tight">
-            預估每月通勤成本：{Math.round(rpgData.commuteAnalysis.monthlyTimeCost).toLocaleString()} 元
-          </div>
-          <div className="mt-1 text-gray-400 leading-tight">
-            租金差價：{Math.round(rpgData.commuteAnalysis.rentSaving).toLocaleString()} 元
-          </div>
-          <div className="mt-1 text-gray-400 leading-tight">
-            將月淨效益向上調整到 400 元級距：
-            {rpgData.commuteAnalysis.benefitLevel > 0
-              ? `${rpgData.commuteAnalysis.roundedNetBenefit.toLocaleString()} 元，等級 ${rpgData.commuteAnalysis.benefitLevel}`
-              : '無正向淨效益'}
-          </div>
-          <div className="mt-1 text-gray-200 font-semibold leading-tight">
-            月淨效益：{rpgData.commuteAnalysis.netBenefit >= 0 ? '省 ' : '虧 '}
-            {Math.abs(Math.round(rpgData.commuteAnalysis.netBenefit)).toLocaleString()} 元
-          </div>
-        </div>
       </div>
-    </div>
   );
 };

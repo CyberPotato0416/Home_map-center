@@ -64,6 +64,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
   const [imageStatus, setImageStatus] = useState<{ name: string; count: number; isIdFolder: boolean }[]>([]);
   const [showStatusList, setShowStatusList] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
+  const [isChannelOpen, setIsChannelOpen] = useState<boolean>(false);
   
   const zipInputRef = useRef<HTMLInputElement>(null);
 
@@ -798,156 +799,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
         )}
       </div>
 
-      {/* ⚡ 591Premium 相片直灌通道 Loader Panel ⚡ */}
-      <div className="bg-[#0f111a] border border-[#1e2330] rounded-xl p-4 shadow-lg flex flex-col gap-3 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00f0ff] to-[#005fff]"></div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
-            <ImageIcon className="w-4 h-4 text-[#00f0ff]" />
-            相片資料夾直灌通道 (RAR/ZIP/Folder)
-          </div>
-          <button 
-            type="button"
-            onClick={refreshImageStatus}
-            title="點擊重整存量"
-            className="text-gray-500 hover:text-cyan-400 p-1 rounded hover:bg-white/5 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <p className="text-[10px] text-gray-500 leading-relaxed font-sans">
-          您可以將<strong>「整包 rentals_images」</strong>資料夾直接拖入下方，或將相片壓縮成 <code>.zip</code> 檔/<code>.rar</code> 檔拖放或點選上傳，系統會自動在雲端沙盒完成解壓與配對。
-        </p>
-
-        {/* DRAG AND DROP AREA */}
-        <div
-          onDragEnter={handleDrag}
-          onDragOver={handleDrag}
-          onDragLeave={handleDrag}
-          onDrop={handleDrop}
-          onClick={handleZipClick}
-          className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 select-none ${
-            dragActive
-              ? "border-[#00f0ff] bg-cyan-500/10 text-[#00f0ff] scale-[0.99] shadow-inner shadow-[#00f0ff]/10"
-              : "border-[#1e2330] hover:border-cyan-500/40 hover:bg-[#161a25]/50 text-gray-400"
-          }`}
-        >
-          <input
-            type="file"
-            accept=".zip,.rar"
-            ref={zipInputRef}
-            onChange={handleZipFileChange}
-            className="hidden"
-          />
-
-          <UploadCloud className={`w-8 h-8 transition-transform duration-300 ${dragActive ? "animate-bounce text-[#00f0ff]" : "text-gray-500 hover:text-cyan-400"}`} />
-          
-          <div className="text-[10px] font-mono font-bold tracking-tight text-center">
-            {dragActive ? (
-              <span className="text-cyan-400">「偵測到拖放，請在此放開滑鼠」</span>
-            ) : (
-              <span>拖放 rentals_images 資料夾或 ZIP/RAR 檔至此</span>
-            )}
-          </div>
-          <div className="text-[9px] text-gray-600 text-center">
-            或點此瀏覽本機中的壓縮檔 (.zip, .rar)
-          </div>
-        </div>
-
-        {/* LOADING PROGRESS AND STATUS */}
-        {uploading && (
-          <div className="bg-cyan-500/5 border border-cyan-500/20 text-cyan-400 text-[10px] p-2.5 rounded-lg flex flex-col gap-2 font-mono">
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00f0ff]" />
-              <span className="font-semibold text-gray-300">背景直灌通道運行中...</span>
-            </div>
-            <div className="text-[9px] text-gray-400 leading-snug">
-              {uploadProgress}
-            </div>
-            {/* PROGRESS SIMULATION SUB-BAR */}
-            <div className="w-full bg-[#161a25] rounded-full h-1 overflow-hidden">
-              <div className="bg-[#00f0ff] h-full animate-pulse transition-all duration-300" style={{ width: "100%" }}></div>
-            </div>
-          </div>
-        )}
-
-        {/* SUCCESS ALERTER */}
-        {uploadSuccess && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] p-2.5 rounded-lg flex items-start gap-2 font-sans">
-            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <div className="font-semibold text-gray-200">灌入成功！</div>
-              <p className="text-[9px] text-gray-400 mt-1 leading-snug">{uploadSuccess}</p>
-            </div>
-          </div>
-        )}
-
-        {/* ERROR ALERTER */}
-        {uploadError && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-500 text-[10px] p-2.5 rounded-lg flex items-start gap-2 font-sans">
-            <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <div className="font-semibold text-gray-200">管道受阻或未解壓</div>
-              <p className="text-[9px] text-red-400/80 mt-1 leading-snug">{uploadError}</p>
-            </div>
-          </div>
-        )}
-
-        {/* 🛠️ 手動比對與自愈修復相片按鈕 🛠️ */}
-        <button
-          type="button"
-          onClick={forceHealImages}
-          className="w-full bg-cyan-950/40 hover:bg-cyan-900/60 active:scale-[0.98] border border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 text-[10px] font-mono font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-cyan-950/30 select-none group"
-        >
-          <RefreshCw className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-180 transition-transform duration-300" />
-          <span>⚡ 診斷比對並自動修復所有相片連結 ⚡</span>
-        </button>
-
-        {/* EXISTING COCKPIT DIRECTORIES PANEL (INHIBITED) */}
-        {/*
-        <div className="border-t border-[#1e2330]/60 pt-2 mt-1">
-          <button
-            type="button"
-            onClick={() => setShowStatusList(!showStatusList)}
-            className="w-full flex items-center justify-between text-[10px] font-mono text-gray-400 hover:text-cyan-400 transition-colors"
-          >
-            <span className="flex items-center gap-1.5 font-bold">
-              <FolderOpen className="w-3.5 h-3.5 text-cyan-500" />
-              開闢現存相片庫 ({imageStatus.length} 個夾)
-            </span>
-            <span className="text-gray-600 hover:text-gray-400 underline">
-              {showStatusList ? "收合目錄" : "展開檢視"}
-            </span>
-          </button>
-
-          {showStatusList && (
-            <div className="mt-2 max-h-[140px] overflow-y-auto bg-[#0a0c12] border border-[#1e2330]/80 rounded p-2 flex flex-col gap-1.5 custom-scrollbar font-mono text-[9px]">
-              {imageStatus.length === 0 ? (
-                <div className="text-gray-600 text-center py-2">（無現存 rentals_images 目錄，請先直灌）</div>
-              ) : (
-                <div className="grid grid-cols-2 gap-1">
-                  {imageStatus.map((dir, idx) => (
-                    <div 
-                      key={idx}
-                      className="flex items-center justify-between bg-[#131622] p-1.5 rounded border border-[#1e2330]/40 text-gray-300"
-                    >
-                      <span className={`truncate ${dir.isIdFolder ? "text-cyan-400 font-bold" : "text-purple-400"}`}>
-                        📁 {dir.name}
-                      </span>
-                      <span className="text-gray-500 font-bold shrink-0">
-                        {dir.count} 張
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        */}
-      </div>
 
       {/* Advanced Filtering Section */}
       <div className="bg-[#0f111a] border border-[#1e2330] rounded-xl p-4 shadow-lg flex flex-col gap-4">
@@ -1119,6 +971,133 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             </div>
           )}
         </div>
+      </div>
+
+      {/* ⚡ 591Premium 相片直灌通道 Loader Panel (Collapsible) ⚡ */}
+      <div className="bg-[#0f111a] border border-[#1e2330] rounded-xl shadow-lg flex flex-col relative overflow-hidden transition-all duration-300">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00f0ff] to-[#005fff]"></div>
+
+        <div className="w-full flex items-center justify-between p-4 hover:bg-white/[0.01] transition-colors border-b border-[#1e2330]/20">
+          <button
+            type="button"
+            onClick={() => setIsChannelOpen(!isChannelOpen)}
+            className="flex-1 flex items-center justify-between text-left focus:outline-none cursor-pointer"
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
+              <ImageIcon className="w-4 h-4 text-[#00f0ff]" />
+              相片資料夾直灌通道 (RAR/ZIP/Folder)
+            </div>
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[10px] text-gray-500 font-mono">
+                {isChannelOpen ? "收合面板" : "展開直灌"}
+              </span>
+              <span className={`text-[8px] transform transition-transform duration-200 text-gray-500 ${isChannelOpen ? "rotate-180" : ""}`}>
+                ▼
+              </span>
+            </div>
+          </button>
+          
+          <button 
+            type="button"
+            onClick={refreshImageStatus}
+            title="點擊重整存量"
+            className="text-gray-500 hover:text-cyan-400 p-1 rounded hover:bg-white/5 transition-colors cursor-pointer shrink-0 z-10"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {isChannelOpen && (
+          <div className="p-4 flex flex-col gap-3">
+            <p className="text-[10px] text-gray-500 leading-relaxed font-sans">
+              您可以將<strong>「整包 rentals_images」</strong>資料夾直接拖入下方，或將相片壓縮成 <code>.zip</code> 檔/<code>.rar</code> 檔拖放或點選上傳，系統會自動在雲端沙盒完成解壓與配對。
+            </p>
+
+            {/* DRAG AND DROP AREA */}
+            <div
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={handleZipClick}
+              className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 select-none ${
+                dragActive
+                  ? "border-[#00f0ff] bg-cyan-500/10 text-[#00f0ff] scale-[0.99] shadow-inner shadow-[#00f0ff]/10"
+                  : "border-[#1e2330] hover:border-cyan-500/40 hover:bg-[#161a25]/50 text-gray-400"
+              }`}
+            >
+              <input
+                type="file"
+                accept=".zip,.rar"
+                ref={zipInputRef}
+                onChange={handleZipFileChange}
+                className="hidden"
+              />
+
+              <UploadCloud className={`w-8 h-8 transition-transform duration-300 ${dragActive ? "animate-bounce text-[#00f0ff]" : "text-gray-500 hover:text-cyan-400"}`} />
+              
+              <div className="text-[10px] font-mono font-bold tracking-tight text-center">
+                {dragActive ? (
+                  <span className="text-cyan-400">「偵測到拖放，請在此放開滑鼠」</span>
+                ) : (
+                  <span>拖放 rentals_images 資料夾或 ZIP/RAR 檔至此</span>
+                )}
+              </div>
+              <div className="text-[9px] text-gray-600 text-center">
+                或點此瀏覽本機中的壓縮檔 (.zip, .rar)
+              </div>
+            </div>
+
+            {/* LOADING PROGRESS AND STATUS */}
+            {uploading && (
+              <div className="bg-cyan-500/5 border border-cyan-500/20 text-cyan-400 text-[10px] p-2.5 rounded-lg flex flex-col gap-2 font-mono">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00f0ff]" />
+                  <span className="font-semibold text-gray-300">背景直灌通道運行中...</span>
+                </div>
+                <div className="text-[9px] text-gray-400 leading-snug">
+                  {uploadProgress}
+                </div>
+                {/* PROGRESS SIMULATION SUB-BAR */}
+                <div className="w-full bg-[#161a25] rounded-full h-1 overflow-hidden">
+                  <div className="bg-[#00f0ff] h-full animate-pulse transition-all duration-300" style={{ width: "100%" }}></div>
+                </div>
+              </div>
+            )}
+
+            {/* SUCCESS ALERTER */}
+            {uploadSuccess && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] p-2.5 rounded-lg flex items-start gap-2 font-sans">
+                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-200">灌入成功！</div>
+                  <p className="text-[9px] text-gray-400 mt-1 leading-snug">{uploadSuccess}</p>
+                </div>
+              </div>
+            )}
+
+            {/* ERROR ALERTER */}
+            {uploadError && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-500 text-[10px] p-2.5 rounded-lg flex items-start gap-2 font-sans">
+                <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-200">管道受阻或未解壓</div>
+                  <p className="text-[9px] text-red-400/80 mt-1 leading-snug">{uploadError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 🛠️ 手動比對與自愈修復相片按鈕 🛠️ */}
+            <button
+              type="button"
+              onClick={forceHealImages}
+              className="w-full bg-cyan-950/40 hover:bg-cyan-900/60 active:scale-[0.98] border border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 text-[10px] font-mono font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-cyan-950/30 select-none group"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-180 transition-transform duration-300" />
+              <span>⚡ 診斷比對並自動修復所有相片連結 ⚡</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

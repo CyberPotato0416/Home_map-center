@@ -10,17 +10,16 @@ interface CustomAttribute {
 interface RentalAttributesGridProps {
   attributes: CustomAttribute[];
   sidebarWidth: number;
+  children?: React.ReactNode;
 }
 
 export const RentalAttributesGrid: React.FC<RentalAttributesGridProps> = ({
   attributes,
   sidebarWidth,
+  children,
 }) => {
   return (
-    <div className="pt-3">
-      <h4 className="text-[12px] font-bold text-gray-400 mb-3 border-b border-white/10 pb-1 flex items-center gap-1">
-        <Info className="w-3.5 h-3.5" /> 附加屬性
-      </h4>
+    <div className="pt-1">
       <div
         className={`grid gap-x-2 gap-y-3 ${
           sidebarWidth >= 840
@@ -82,6 +81,7 @@ export const RentalAttributesGrid: React.FC<RentalAttributesGridProps> = ({
           </div>
         )}
       </div>
+      {children}
     </div>
   );
 };
