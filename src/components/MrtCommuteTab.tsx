@@ -2,38 +2,37 @@ import React from 'react';
 import { Train, Eye, EyeOff, Compass } from 'lucide-react';
 import { MrtStation, TargetCenter } from '../types';
 import { MRT_LINE_COLORS, MRT_STATIONS_DATA } from '../constants';
+import { useAppContext } from '../context/AppContext';
+import L from 'leaflet';
 
-interface MrtCommuteTabProps {
-  targetCenter: TargetCenter;
-  showHeatmap: boolean;
-  setShowHeatmap: (v: boolean) => void;
-  showMrtLines: boolean;
-  setShowMrtLines: (v: boolean) => void;
-  showMrtStations: boolean;
-  setShowMrtStations: (v: boolean) => void;
-  showMrtLabels: boolean;
-  setShowMrtLabels: (v: boolean) => void;
-  selectedStation: MrtStation | null;
-  setSelectedStation: (station: MrtStation | null) => void;
-  setSelectedDistrict: (d: string | null) => void;
-  onStationClick: (station: MrtStation) => void;
-}
+export const MrtCommuteTab: React.FC = () => {
+  const {
+    targetCenter,
+    showHeatmap,
+    setShowHeatmap,
+    showMrtLines,
+    setShowMrtLines,
+    showMrtStations,
+    setShowMrtStations,
+    showMrtLabels,
+    setShowMrtLabels,
+    selectedStation,
+    setSelectedStation,
+    setSelectedDistrict,
+    mapInstanceRef,
+  } = useAppContext();
 
-export const MrtCommuteTab: React.FC<MrtCommuteTabProps> = ({
-  targetCenter,
-  showHeatmap,
-  setShowHeatmap,
-  showMrtLines,
-  setShowMrtLines,
-  showMrtStations,
-  setShowMrtStations,
-  showMrtLabels,
-  setShowMrtLabels,
-  selectedStation,
-  setSelectedStation,
-  setSelectedDistrict,
-  onStationClick,
-}) => {
+  const handleStationClick = (st: MrtStation) => {
+    setSelectedStation(st);
+    setSelectedDistrict(null);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView(st.coord as L.LatLngExpression, 14, {
+        animate: true,
+      });
+    }
+  };
+
+  const onStationClick = handleStationClick;
   return (
     <div className="flex flex-col gap-4 animate-fade-in">
       {/* MRT Controls Card */}

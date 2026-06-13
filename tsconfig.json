@@ -22,5 +22,16 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src/**/*",
+    "server.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "fetch_repo.ts",
+    "fetch*.js",
+    "sync.cjs",
+    "unzip_images.js"
+  ]
 }

@@ -1,12 +1,10 @@
 import React from 'react';
+import { useAppContext } from '../context/AppContext';
 
-interface StatusHUDProps {
-  lat: number;
-  lng: number;
-  zoom: number;
-}
-
-export const StatusHUD: React.FC<StatusHUDProps> = ({ lat, lng, zoom }) => {
+export const StatusHUD: React.FC = () => {
+  const { mapCenterPos, zoomLevel } = useAppContext();
+  const { lat, lng } = mapCenterPos;
+  const zoom = zoomLevel;
   return (
     <div className="absolute bottom-4 left-4 z-[999] pointer-events-none hidden sm:block">
       <div className="bg-[#0b0c10]/95 border border-white/10 px-3 py-1.5 rounded-lg text-[11px] text-[#9ca3af] font-mono flex items-center gap-2 shadow-lg backdrop-blur-md">

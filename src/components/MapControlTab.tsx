@@ -1,36 +1,24 @@
 import React from 'react';
 import { Sliders, Eye, EyeOff, RefreshCw, AlertTriangle, Compass, MapPin } from 'lucide-react';
 import { TargetCenter } from '../types';
+import { useAppContext } from '../context/AppContext';
 
-interface MapControlTabProps {
-  targetCenter: TargetCenter;
-  setTargetCenter: (c: TargetCenter) => void;
-  radius: number;
-  setRadius: (r: number) => void;
-  showCircle: boolean;
-  setShowCircle: (s: boolean) => void;
-  isGeoJsonLoading: boolean;
-  geoJsonError: string | null;
-  isUsingFallbackGeoJson: boolean;
-  computedArea: string;
-  isResetting: boolean;
-  onResetMap: () => void;
-}
+export const MapControlTab: React.FC = () => {
+  const {
+    targetCenter,
+    setTargetCenter,
+    radius,
+    setRadius,
+    showCircle,
+    setShowCircle,
+    isGeoJsonLoading,
+    geoJsonError,
+    isUsingFallbackGeoJson,
+    isResetting,
+    recenterMap: onResetMap,
+  } = useAppContext();
 
-export const MapControlTab: React.FC<MapControlTabProps> = ({
-  targetCenter,
-  setTargetCenter,
-  radius,
-  setRadius,
-  showCircle,
-  setShowCircle,
-  isGeoJsonLoading,
-  geoJsonError,
-  isUsingFallbackGeoJson,
-  computedArea,
-  isResetting,
-  onResetMap,
-}) => {
+  const computedArea = (Math.PI * Math.pow(radius, 2)).toFixed(0);
   // Local slider state to ensure high-performance dragging feedback without trigger high-frequency re-renders on the map
   const [localRadius, setLocalRadius] = React.useState<number>(radius);
 

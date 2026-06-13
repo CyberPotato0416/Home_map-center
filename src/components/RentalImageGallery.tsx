@@ -13,6 +13,16 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [localFolderFiles, setLocalFolderFiles] = useState<string[]>([]);
 
+  const [imgSourceMode, setImgSourceMode] = useState<"local" | "github">(() => {
+    return (localStorage.getItem("rental_image_source_mode") as "local" | "github") || "local";
+  });
+
+  const handleModeChange = (mode: "local" | "github") => {
+    setImgSourceMode(mode);
+    localStorage.setItem("rental_image_source_mode", mode);
+    setCurrentImgIndex(0);
+  };
+
   // 1. Core ID parsing logic - streamlined utilizing the common helper
   const idValue = getRentalLocalId(rental);
 
@@ -74,17 +84,33 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
       return localImgPaths;
     }
 
+    // 3.3 Dynamic fallback for GitHub Mode: if no image paths and we are in github mode, assume up to 15 images
+    if (imgSourceMode === "github" && idValue) {
+      return Array.from(
+        { length: 15 },
+        (_, i) => `/rentals_images/${idValue}/image_${i + 1}.jpg`
+      );
+    }
+
     return [];
-  }, [rental, localFolderFiles, idValue]);
+  }, [rental, localFolderFiles, idValue, imgSourceMode]);
 
   // Robust path resolver
   const getImgSrc = () => {
     const src = imagesToUse[currentImgIndex];
     if (!src) return "";
-    if (!src.startsWith("/") && !src.startsWith("http")) {
-      return "/" + src;
+    
+    let resolvedSrc = src;
+    if (!resolvedSrc.startsWith("/") && !resolvedSrc.startsWith("http")) {
+      resolvedSrc = "/" + resolvedSrc;
     }
-    return src;
+
+    // Convert to GitHub raw content URL if in GitHub mode
+    if (imgSourceMode === "github" && resolvedSrc.startsWith("/")) {
+      return `https://raw.githubusercontent.com/CyberPotato0416/Home_map-center/main/public${resolvedSrc}`;
+    }
+
+    return resolvedSrc;
   };
 
   return (
@@ -146,6 +172,35 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
             <span className="text-xs font-mono">No Image</span>
           </div>
         )}
+      </div>
+
+      {/* Segmented Control for Image Source Toggle */}
+      <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-lg px-2.5 py-1.5 mt-2 text-[11px] font-sans">
+        <span className="text-gray-400 font-medium">📸 圖片存取模式</span>
+        <div className="flex bg-[#161a25] p-0.5 rounded border border-[#1e2330]">
+          <button
+            type="button"
+            onClick={() => handleModeChange("local")}
+            className={`px-2.5 py-1 rounded transition-all cursor-pointer font-bold ${
+              imgSourceMode === "local"
+                ? "bg-cyan-500/10 text-cyan-400 border border-cyan-400/20 shadow-[0_0_8px_rgba(34,211,238,0.15)]"
+                : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            本機上傳 (Local)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeChange("github")}
+            className={`px-2.5 py-1 rounded transition-all cursor-pointer font-bold ${
+              imgSourceMode === "github"
+                ? "bg-purple-500/10 text-purple-400 border border-purple-400/20 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
+                : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            GitHub 備援 (GitHub)
+          </button>
+        </div>
       </div>
     </div>
   );

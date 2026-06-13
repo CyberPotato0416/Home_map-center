@@ -4,12 +4,12 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { execSync } from "child_process";
 
-function getImageContentType(filePath: string): string {
+async function getImageContentType(filePath: string): Promise<string> {
+  let fd;
   try {
-    const fd = fs.openSync(filePath, "r");
+    fd = await fs.promises.open(filePath, "r");
     const buffer = Buffer.alloc(12);
-    const bytesRead = fs.readSync(fd, buffer, 0, 12, 0);
-    fs.closeSync(fd);
+    const { bytesRead } = await fd.read(buffer, 0, 12, 0);
 
     if (bytesRead >= 12) {
       // Check for WebP: 'RIFF' (0x52, 0x49, 0x46, 0x46) and 'WEBP' (0x57, 0x45, 0x42, 0x50)
@@ -41,6 +41,10 @@ function getImageContentType(filePath: string): string {
     }
   } catch (err) {
     console.error("Error sniffing image content type:", err);
+  } finally {
+    if (fd) {
+      await fd.close();
+    }
   }
   return "";
 }
@@ -233,12 +237,12 @@ async function startServer() {
   });
 
   // Direct, custom super-robust, range-supporting serving of images with correct headers to completely bypass Vite & Express sendFile MIME conflicts
-  app.get("/rentals_images/:id/:filename", (req, res) => {
+  app.get("/rentals_images/:id/:filename", async (req, res) => {
     try {
       const { id, filename } = req.params;
       const filePath = path.join(process.cwd(), "public", "rentals_images", id, filename);
       if (fs.existsSync(filePath)) {
-        const sniffedMime = getImageContentType(filePath);
+        const sniffedMime = await getImageContentType(filePath);
         const headers: Record<string, string> = {
           "Cache-Control": "no-store, no-cache, must-revalidate, private"
         };

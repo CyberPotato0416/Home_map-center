@@ -2,26 +2,23 @@ import React from 'react';
 import { Layers, Eye, EyeOff, Compass, Shield } from 'lucide-react';
 import { RentData } from '../types';
 import { getRentColor, calculateRecommendedSalary } from '../utils';
+import { useAppContext } from '../context/AppContext';
+import { DISTRICT_RENT_DATA } from '../constants';
 
-interface RentHeatmapTabProps {
-  showHeatmap: boolean;
-  setShowHeatmap: (s: boolean) => void;
-  activeDistrictName: string | null;
-  activeDistrictRent: RentData | null;
-  selectedDistrict: string | null;
-  setSelectedDistrict: (d: string | null) => void;
-  setSelectedStation: (st: any | null) => void;
-}
+export const RentHeatmapTab: React.FC = () => {
+  const {
+    showHeatmap,
+    setShowHeatmap,
+    selectedDistrict,
+    setSelectedDistrict,
+    hoveredDistrict,
+    setSelectedStation,
+  } = useAppContext();
 
-export const RentHeatmapTab: React.FC<RentHeatmapTabProps> = ({
-  showHeatmap,
-  setShowHeatmap,
-  activeDistrictName,
-  activeDistrictRent,
-  selectedDistrict,
-  setSelectedDistrict,
-  setSelectedStation,
-}) => {
+  const activeDistrictName = hoveredDistrict || selectedDistrict || null;
+  const activeDistrictRent = activeDistrictName
+    ? DISTRICT_RENT_DATA[activeDistrictName]
+    : null;
   return (
     <div className="flex flex-col gap-4 animate-fade-in">
       {/* Rent Heatmap Toggle Card */}

@@ -7,135 +7,25 @@ import {
   FileSpreadsheet,
   Database,
 } from "lucide-react";
-import { RentData, MrtStation, RentalProperty, TargetCenter } from "../types";
 import { MapControlTab } from "./MapControlTab";
 import { RentHeatmapTab } from "./RentHeatmapTab";
 import { MrtCommuteTab } from "./MrtCommuteTab";
 import { RentalImportTab } from "./RentalImportTab";
 import { FilterExportTab } from "./FilterExportTab";
+import { useAppContext } from "../context/AppContext";
 
-interface SidebarProps {
-  isSidebarOpen: boolean;
-  activeTab: number;
-  setActiveTab: (tab: number) => void;
+export const Sidebar: React.FC = () => {
+  const {
+    isSidebarOpen,
+    activeTab,
+    setActiveTab,
+    sidebarWidth,
+    setSidebarWidth,
+    isSidebarDragging,
+    setIsSidebarDragging,
+    recenterMap,
+  } = useAppContext();
 
-  targetCenter: TargetCenter;
-  setTargetCenter: (t: TargetCenter) => void;
-
-  // Tab 1 state
-  radius: number;
-  setRadius: (r: number) => void;
-  showCircle: boolean;
-  setShowCircle: (s: boolean) => void;
-  isGeoJsonLoading: boolean;
-  geoJsonError: string | null;
-  isUsingFallbackGeoJson: boolean;
-  computedArea: string;
-  isResetting: boolean;
-  onResetMap: () => void;
-
-  // Tab 2 state
-  showHeatmap: boolean;
-  setShowHeatmap: (s: boolean) => void;
-  activeDistrictName: string | null;
-  activeDistrictRent: RentData | null;
-  selectedDistrict: string | null;
-  setSelectedDistrict: (d: string | null) => void;
-
-  // Tab 3 state
-  showMrtLines: boolean;
-  setShowMrtLines: (v: boolean) => void;
-  showMrtStations: boolean;
-  setShowMrtStations: (v: boolean) => void;
-  showMrtLabels: boolean;
-  setShowMrtLabels: (v: boolean) => void;
-  selectedStation: MrtStation | null;
-  setSelectedStation: (station: MrtStation | null) => void;
-  onStationClick: (station: MrtStation) => void;
-
-  // Tab 4 & 5 state
-  rentals: RentalProperty[];
-  setRentals: (r: RentalProperty[]) => void;
-  selectedRental: RentalProperty | null;
-  setSelectedRental: (r: RentalProperty | null) => void;
-  maxBudget: number;
-  setMaxBudget: (b: number) => void;
-  minSize: number;
-  setMinSize: (s: number) => void;
-  maxDistance: number;
-  setMaxDistance: (d: number) => void;
-  searchKeyword: string;
-  setSearchKeyword: (k: string) => void;
-  statusFilters: { signing: boolean; reviewing: boolean; renting: boolean };
-  setStatusFilters: (
-    f:
-      | { signing: boolean; reviewing: boolean; renting: boolean }
-      | ((prev: any) => any),
-  ) => void;
-
-  sidebarWidth: number;
-  setSidebarWidth: (w: number) => void;
-  isSidebarDragging: boolean;
-  setIsSidebarDragging: (d: boolean) => void;
-  onResizeComplete: () => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({
-  isSidebarOpen,
-  activeTab,
-  setActiveTab,
-
-  targetCenter,
-  setTargetCenter,
-
-  radius,
-  setRadius,
-  showCircle,
-  setShowCircle,
-  isGeoJsonLoading,
-  geoJsonError,
-  isUsingFallbackGeoJson,
-  computedArea,
-  isResetting,
-  onResetMap,
-
-  showHeatmap,
-  setShowHeatmap,
-  activeDistrictName,
-  activeDistrictRent,
-  selectedDistrict,
-  setSelectedDistrict,
-
-  showMrtLines,
-  setShowMrtLines,
-  showMrtStations,
-  setShowMrtStations,
-  showMrtLabels,
-  setShowMrtLabels,
-  selectedStation,
-  setSelectedStation,
-  onStationClick,
-
-  rentals,
-  setRentals,
-  selectedRental,
-  setSelectedRental,
-  maxBudget,
-  setMaxBudget,
-  minSize,
-  setMinSize,
-  maxDistance,
-  setMaxDistance,
-  searchKeyword,
-  setSearchKeyword,
-  statusFilters,
-  setStatusFilters,
-  sidebarWidth,
-  setSidebarWidth,
-  isSidebarDragging,
-  setIsSidebarDragging,
-  onResizeComplete,
-}) => {
   const startResizing = React.useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -158,15 +48,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         setIsSidebarDragging(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
-        setTimeout(() => {
-          onResizeComplete();
-        }, 50);
       };
 
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [sidebarWidth, setSidebarWidth, setIsSidebarDragging, onResizeComplete],
+    [sidebarWidth, setSidebarWidth, setIsSidebarDragging],
   );
 
   return (
@@ -267,81 +154,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* MAIN SIDEBAR PANEL CONTENTS */}
       <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
-        {activeTab === 1 && (
-          <MapControlTab
-            targetCenter={targetCenter}
-            setTargetCenter={setTargetCenter}
-            radius={radius}
-            setRadius={setRadius}
-            showCircle={showCircle}
-            setShowCircle={setShowCircle}
-            isGeoJsonLoading={isGeoJsonLoading}
-            geoJsonError={geoJsonError}
-            isUsingFallbackGeoJson={isUsingFallbackGeoJson}
-            computedArea={computedArea}
-            isResetting={isResetting}
-            onResetMap={onResetMap}
-          />
-        )}
-
-        {activeTab === 2 && (
-          <RentHeatmapTab
-            showHeatmap={showHeatmap}
-            setShowHeatmap={setShowHeatmap}
-            activeDistrictName={activeDistrictName}
-            activeDistrictRent={activeDistrictRent}
-            selectedDistrict={selectedDistrict}
-            setSelectedDistrict={setSelectedDistrict}
-            setSelectedStation={setSelectedStation}
-          />
-        )}
-
-        {activeTab === 3 && (
-          <MrtCommuteTab
-            targetCenter={targetCenter}
-            showHeatmap={showHeatmap}
-            setShowHeatmap={setShowHeatmap}
-            showMrtLines={showMrtLines}
-            setShowMrtLines={setShowMrtLines}
-            showMrtStations={showMrtStations}
-            setShowMrtStations={setShowMrtStations}
-            showMrtLabels={showMrtLabels}
-            setShowMrtLabels={setShowMrtLabels}
-            selectedStation={selectedStation}
-            setSelectedStation={setSelectedStation}
-            setSelectedDistrict={setSelectedDistrict}
-            onStationClick={onStationClick}
-          />
-        )}
-
-        {activeTab === 4 && (
-          <RentalImportTab
-            rentals={rentals}
-            setRentals={setRentals}
-            selectedRental={selectedRental}
-            setSelectedRental={setSelectedRental}
-            targetCenter={targetCenter}
-            sidebarWidth={sidebarWidth}
-          />
-        )}
-
-        {activeTab === 5 && (
-          <FilterExportTab
-            rentals={rentals}
-            setRentals={setRentals}
-            setSelectedRental={setSelectedRental}
-            maxBudget={maxBudget}
-            setMaxBudget={setMaxBudget}
-            minSize={minSize}
-            setMinSize={setMinSize}
-            maxDistance={maxDistance}
-            setMaxDistance={setMaxDistance}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            statusFilters={statusFilters}
-            setStatusFilters={setStatusFilters}
-          />
-        )}
+        {activeTab === 1 && <MapControlTab />}
+        {activeTab === 2 && <RentHeatmapTab />}
+        {activeTab === 3 && <MrtCommuteTab />}
+        {activeTab === 4 && <RentalImportTab />}
+        {activeTab === 5 && <FilterExportTab />}
       </div>
 
       {/* INNER CARD FOOTERS */}
