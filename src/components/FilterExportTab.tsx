@@ -723,7 +723,8 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2 mt-1">
+        <div className="flex gap-2 items-center mt-1">
+          {/* 預設包 (重置按鈕) */}
           <button
             onClick={async () => {
               try {
@@ -753,26 +754,37 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                 setError("無法取得預設資料包");
               }
             }}
-            className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold py-2.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+            title="重置為預設資料包"
+            className="p-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all cursor-pointer shrink-0"
           >
-            <Database className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">預設包</span>
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
 
+          {/* 匯入 */}
           <button
             onClick={handleImportClick}
-            className="bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/30 text-[#00f0ff] text-[10px] font-bold py-2.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+            className="flex-1 bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/30 text-[#00f0ff] text-[10px] font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
           >
             <UploadCloud className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">匯入 CSV</span>
           </button>
 
+          {/* 匯出 */}
           <button
             onClick={exportToCSV}
-            className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-bold py-2.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+            className="flex-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
           >
             <DownloadCloud className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">匯出 CSV</span>
+          </button>
+
+          {/* 清空 */}
+          <button
+            onClick={clearRentals}
+            className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-[10px] font-bold py-2.5 px-2.5 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0"
+          >
+            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+            <span>清空</span>
           </button>
         </div>
 
@@ -782,12 +794,6 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
               <CheckCircle className="w-3 h-3 text-emerald-400" />
               目前已載入 {rentals.length} 筆物件
             </div>
-            <button
-              onClick={clearRentals}
-              className="text-red-400 hover:text-red-300 flex items-center gap-1"
-            >
-              <Trash2 className="w-3 h-3" /> 清空
-            </button>
           </div>
         )}
       </div>
