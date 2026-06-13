@@ -91,7 +91,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   // Try to find ping from customFields
   const pingValue = useMemo(() => {
     if (!selectedRental) return null;
-    for (const [key, val] of Object.entries(selectedRental.customFields)) {
+    for (const [key, val] of Object.entries(selectedRental.customFields || {})) {
       if (key.includes("坪數") || key.includes("坪")) {
         const p = parseFloat(String(val));
         if (!isNaN(p) && p > 0) return p;
@@ -125,7 +125,7 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   const customAttributes = useMemo(() => {
     if (!selectedRental) return [];
 
-    const fieldsMap = { ...selectedRental.customFields };
+    const fieldsMap = { ...(selectedRental.customFields || {}) };
     if (selectedRental.floor) fieldsMap["floor"] = selectedRental.floor;
 
     const popField = (searchKeys: string[]) => {

@@ -174,8 +174,40 @@ async function startServer() {
     }
   });
 
+  // Get current status of a single rentals_images folder
+  app.get("/api/rentals-images-status/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const folderPath = path.join(process.cwd(), "public", "rentals_images", id);
+      if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+        const files = fs.readdirSync(folderPath).filter(f => !f.startsWith('.'));
+        return res.json({ exists: true, count: files.length });
+      } else {
+        return res.json({ exists: false, count: 0 });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Direct, custom robust file serve endpoint for rentals_images to completely bypass static server router bugs
+  app.get("/rentals_images/:id/:filename", (req, res) => {
+    try {
+      const { id, filename } = req.params;
+      const filePath = path.join(process.cwd(), "public", "rentals_images", id, filename);
+      if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+      } else {
+        res.status(404).send("Image not found");
+      }
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   // Serve the rentals_images directory statically at /rentals_images for reliable image display
   app.use("/rentals_images", express.static(path.join(process.cwd(), "public", "rentals_images")));
+  app.use(express.static(path.join(process.cwd(), "public")));
 
   // Serve with Vite and API fallbacks
   if (process.env.NODE_ENV !== "production") {

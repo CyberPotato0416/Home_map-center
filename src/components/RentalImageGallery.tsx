@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Building } from "lucide-react";
 import { RentalProperty } from "../types";
+import { getRentalLocalId } from "../utils";
 
 interface RentalImageGalleryProps {
   rental: RentalProperty;
@@ -14,66 +15,8 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   const [isFailedCompletely, setIsFailedCompletely] = useState(false);
   const [localFolderImageCount, setLocalFolderImageCount] = useState<number | null>(null);
 
-  // 1. Core ID parsing logic
-  let idValue = "";
-
-  // 1.1 First priority: Try to extract actual ID from rental.images if it already has folder paths
-  if (rental.images && rental.images.length > 0) {
-    for (const img of rental.images) {
-      if (!img) continue;
-      const localFolder = img.match(/rentals_images\/([a-zA-Z0-9_\-]+)/);
-      if (
-        localFolder &&
-        localFolder[1] &&
-        localFolder[1] !== "rentals_images" &&
-        !localFolder[1].startsWith("[") &&
-        !localFolder[1].startsWith("http")
-      ) {
-        idValue = localFolder[1];
-        break;
-      }
-    }
-  }
-
-  // 1.2 Second priority: Try custom fields
-  if (!idValue && rental.customFields) {
-    for (const [k, v] of Object.entries(rental.customFields)) {
-      const lk = k.toLowerCase().trim();
-      if (
-        (lk === "original_591_id" ||
-          lk === "591_id" ||
-          lk === "id_591" ||
-          lk === "id" ||
-          lk === "original_id" ||
-          lk.includes("original_591") ||
-          lk.includes("物編") ||
-          lk.includes("編號")) &&
-        v &&
-        String(v).trim()
-      ) {
-        idValue = String(v).trim();
-        break;
-      }
-    }
-  }
-
-  // 1.3 Third priority: Try source link
-  if (!idValue && rental.link) {
-    const match = rental.link.match(/(\d{6,})/) || rental.link.match(/object\/([a-zA-Z0-9]+)/);
-    if (match) {
-      idValue = match[1];
-    } else {
-      const rencoMatch = rental.link.match(/renco.*\/(\d+)/) || rental.link.match(/renco_(\d+)/);
-      if (rencoMatch) {
-        idValue = `renco_${rencoMatch[1]}`;
-      }
-    }
-  }
-
-  // 1.4 Ultimate priority fallback to ID
-  if (!idValue) {
-    idValue = rental.id;
-  }
+  // 1. Core ID parsing logic - streamlined utilizing the common helper
+  const idValue = getRentalLocalId(rental);
 
   // 2. Fetch server folder inventory to discover files on disk for this ID
   useEffect(() => {
@@ -119,20 +62,20 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
 
   // 3. Formulate absolute image sources list
   const imagesToUse = useMemo(() => {
-    // 3.1 Prefer provided local images if they exist
-    const localImgPaths = (rental.images || []).filter(
-      (img) => img && (img.startsWith("/") || img.startsWith("rentals_images/"))
-    );
-    if (localImgPaths.length > 0) {
-      return localImgPaths;
-    }
-
-    // 3.2 If folder exists on server with files, generate references
+    // 3.1 First priority: If folder exists on server with files, generate references directly based on count
     if (localFolderImageCount !== null && localFolderImageCount > 0) {
       return Array.from(
         { length: localFolderImageCount },
         (_, i) => `/rentals_images/${idValue}/image_${i + 1}.jpg`
       );
+    }
+
+    // 3.2 Fallback: Prefer provided local images if they exist
+    const localImgPaths = (rental.images || []).filter(
+      (img) => img && (img.startsWith("/") || img.startsWith("rentals_images/"))
+    );
+    if (localImgPaths.length > 0) {
+      return localImgPaths;
     }
 
     return [];
@@ -145,6 +88,9 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     if (!currentImgUrl) return "";
 
     let src = currentImgUrl;
+    if (!src.startsWith("/") && !src.startsWith("http")) {
+      src = "/" + src;
+    }
 
     // Direct extension toggles (avoid discarding completely valid paths)
     if (fallbackToAlternateExt) {

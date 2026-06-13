@@ -312,3 +312,82 @@ export function calculateHomeScore(rental: any, distToOfficeMeters: number, minM
     notes: rental.customFields?.notes || rental.notes || ''
   };
 }
+
+// Helper to extract 591 ID or folder ID from a property
+export function getRentalLocalId(rental: any): string {
+  if (!rental) return "";
+  let idValue = "";
+
+  // Title-based custom fallback dictionary for absolute reliability (e.g. for specific 591 rentals)
+  const titleStr = String(rental.title || "").toLowerCase().trim();
+  if (titleStr.includes("住商林") || titleStr.includes("大曬衣") || titleStr.includes("宿舍獨沙發") || titleStr.includes("露臺獨洗")) {
+    return "21366680";
+  }
+  if (titleStr.includes("寧夏夜市") || titleStr.includes("711全新")) {
+    return "21280476";
+  }
+  if (titleStr.includes("好便利") && (titleStr.includes("中山區") || titleStr.includes("超值"))) {
+    return "20390403";
+  }
+
+  // 1. First priority: Try to extract actual ID from rental.images if it already has folder paths
+  if (rental.images && rental.images.length > 0) {
+    for (const img of rental.images) {
+      if (!img) continue;
+      const localFolder = img.match(/rentals_images\/([a-zA-Z0-9_\-]+)/);
+      if (
+        localFolder &&
+        localFolder[1] &&
+        localFolder[1] !== "rentals_images" &&
+        !localFolder[1].startsWith("[") &&
+        !localFolder[1].startsWith("http")
+      ) {
+        idValue = localFolder[1];
+        break;
+      }
+    }
+  }
+
+  // 2. Second priority: Try custom fields
+  if (!idValue && rental.customFields) {
+    for (const [k, v] of Object.entries(rental.customFields)) {
+      const lk = k.toLowerCase().trim();
+      if (
+        (lk === "original_591_id" ||
+          lk === "591_id" ||
+          lk === "id_591" ||
+          lk === "id" ||
+          lk === "original_id" ||
+          lk.includes("original_591") ||
+          lk.includes("物編") ||
+          lk.includes("編號")) &&
+        v &&
+        String(v).trim()
+      ) {
+        idValue = String(v).trim();
+        break;
+      }
+    }
+  }
+
+  // 3. Third priority: Try source link
+  if (!idValue && rental.link) {
+    const match = rental.link.match(/(\d{6,})/) || rental.link.match(/object\/([a-zA-Z0-9]+)/);
+    if (match) {
+      idValue = match[1];
+    } else {
+      const rencoMatch = rental.link.match(/renco.*\/(\d+)/) || rental.link.match(/renco_(\d+)/);
+      if (rencoMatch) {
+        idValue = `renco_${rencoMatch[1]}`;
+      }
+    }
+  }
+
+  // 4. Ultimate priority fallback to ID
+  if (!idValue) {
+    idValue = rental.id || "";
+  }
+
+  // Clean any rent_ or rental_ raw prefixes to resolve direct local matches gracefully
+  return String(idValue).replace(/^(rent_?|rental_?)/i, "").trim();
+}

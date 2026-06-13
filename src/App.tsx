@@ -16,6 +16,7 @@ import {
   calculateRecommendedSalary,
   calculateDistance,
   calculateHomeScore,
+  getRentalLocalId as getRentalLocalIdShared,
 } from "./utils";
 import { getMrtLinesForStation } from "./utils/mrtHelper";
 import { useMapInit } from "./hooks/useMapInit";
@@ -24,6 +25,11 @@ import { FloatingHUD } from "./components/FloatingHUD";
 import { LegendHUD } from "./components/LegendHUD";
 import { StatusHUD } from "./components/StatusHUD";
 import { Sidebar } from "./components/Sidebar";
+
+// Helper to extract 591 ID or folder ID from a property utilizing the shared helper
+function getRentalLocalId(rental: any): string {
+  return getRentalLocalIdShared(rental);
+}
 
 export default function App() {
   // State variables for analytics and interaction
@@ -111,28 +117,79 @@ export default function App() {
   const [sidebarWidth, setSidebarWidth] = useState<number>(420);
   const [isSidebarDragging, setIsSidebarDragging] = useState<boolean>(false);
 
-  // Load rentals from localStorage on mount
+  // Load rentals from localStorage on mount and automatically heal image folders
   useEffect(() => {
     const saved = localStorage.getItem("my_rental_pins");
+    let loadedRentals: RentalProperty[] = [];
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           // Remove old 'rental' prefixed items, keep 'rent_'
-          const filtered = parsed.filter((r: any) => {
+          loadedRentals = parsed.filter((r: any) => {
             const idStartsWithRental = String(r.id).startsWith("rental");
             const titleHasDemo = String(r.title).includes("小資族首選靜巷套房");
             return !idStartsWithRental && !titleHasDemo;
           });
-          setRentals(filtered);
-          if (filtered.length !== parsed.length) {
-            localStorage.setItem("my_rental_pins", JSON.stringify(filtered));
-          }
         }
       } catch (e) {
         console.error("Failed to parse saved rentals", e);
       }
     }
+
+    const healAndSetRentals = async () => {
+      try {
+        const res = await fetch("/api/rentals-images-status");
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.folders)) {
+            let changed = false;
+            const healed = loadedRentals.map((rental) => {
+              const idValue = getRentalLocalId(rental);
+              const folderMatch = data.folders.find(
+                (f: any) => String(f.name).toLowerCase().trim() === String(idValue).toLowerCase().trim()
+              );
+
+              if (folderMatch && folderMatch.count > 0) {
+                // Generate all correct local paths
+                const newLocalImages = Array.from(
+                  { length: folderMatch.count },
+                  (_, i) => `/rentals_images/${idValue}/image_${i + 1}.jpg`
+                );
+
+                // Check if current rental.images is different (either empty, contains remote urls, or length mismatch)
+                const isDifferent =
+                  !rental.images ||
+                  rental.images.length !== newLocalImages.length ||
+                  rental.images.some((img) => !img.startsWith("/rentals_images/"));
+
+                if (isDifferent) {
+                  changed = true;
+                  return {
+                    ...rental,
+                    images: newLocalImages,
+                  };
+                }
+              }
+              return rental;
+            });
+
+            setRentals(healed);
+            if (changed || loadedRentals.length !== (saved ? JSON.parse(saved).length : 0)) {
+              localStorage.setItem("my_rental_pins", JSON.stringify(healed));
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Self-healing image migrator failed:", e);
+      }
+
+      // Fallback: if fetch fails or folders is empty, just use the loaded ones
+      setRentals(loadedRentals);
+    };
+
+    healAndSetRentals();
   }, []);
 
   // Auto-switch tabs based on map interactions
