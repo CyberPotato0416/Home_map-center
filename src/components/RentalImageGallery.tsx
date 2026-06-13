@@ -11,9 +11,7 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   rental,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
-  const [fallbackToAlternateExt, setFallbackToAlternateExt] = useState(false);
-  const [isFailedCompletely, setIsFailedCompletely] = useState(false);
-  const [localFolderImageCount, setLocalFolderImageCount] = useState<number | null>(null);
+  const [localFolderFiles, setLocalFolderFiles] = useState<string[]>([]);
 
   // 1. Core ID parsing logic - streamlined utilizing the common helper
   const idValue = getRentalLocalId(rental);
@@ -22,25 +20,27 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   useEffect(() => {
     let active = true;
     const fetchStatus = async () => {
-      if (!idValue) return;
+      if (!idValue) {
+        setLocalFolderFiles([]);
+        return;
+      }
       try {
-        const res = await fetch("/api/rentals-images-status");
+        const res = await fetch(`/api/rentals-images-status/${idValue}`);
         if (res.ok) {
           const data = await res.json();
-          if (active && data && Array.isArray(data.folders)) {
-            const match = data.folders.find(
-              (f: any) =>
-                String(f.name).toLowerCase().trim() === String(idValue).toLowerCase().trim()
-            );
-            if (match && match.count > 0) {
-              setLocalFolderImageCount(match.count);
+          if (active && data) {
+            if (data.exists && Array.isArray(data.files) && data.files.length > 0) {
+              setLocalFolderFiles(data.files);
             } else {
-              setLocalFolderImageCount(null);
+              setLocalFolderFiles([]);
             }
           }
+        } else {
+          if (active) setLocalFolderFiles([]);
         }
       } catch (err) {
         console.error("Image Gallery status fetch failed:", err);
+        if (active) setLocalFolderFiles([]);
       }
     };
     fetchStatus();
@@ -51,23 +51,19 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
 
   useEffect(() => {
     setCurrentImgIndex(0);
-    setFallbackToAlternateExt(false);
-    setIsFailedCompletely(false);
-  }, [rental, localFolderImageCount]);
-
-  useEffect(() => {
-    setFallbackToAlternateExt(false);
-    setIsFailedCompletely(false);
-  }, [currentImgIndex]);
+  }, [rental, localFolderFiles]);
 
   // 3. Formulate absolute image sources list
   const imagesToUse = useMemo(() => {
-    // 3.1 First priority: If folder exists on server with files, generate references directly based on count
-    if (localFolderImageCount !== null && localFolderImageCount > 0) {
-      return Array.from(
-        { length: localFolderImageCount },
-        (_, i) => `/rentals_images/${idValue}/image_${i + 1}.jpg`
-      );
+    // 3.1 First priority: If folder exists on server with files, map using the EXACT files returned by readdirSync to support .png, .jpg, etc. without breakage!
+    if (localFolderFiles && localFolderFiles.length > 0) {
+      // Natural sorting so image_1 is before image_10, etc.
+      const sortedFiles = [...localFolderFiles].sort((a, b) => {
+        const numA = parseInt(a.replace(/[^0-9]/g, ""), 10) || 0;
+        const numB = parseInt(b.replace(/[^0-9]/g, ""), 10) || 0;
+        return numA - numB;
+      });
+      return sortedFiles.map((file) => `/rentals_images/${idValue}/${file}`);
     }
 
     // 3.2 Fallback: Prefer provided local images if they exist
@@ -79,46 +75,16 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
     }
 
     return [];
-  }, [rental, localFolderImageCount, idValue]);
-
-  const currentImgUrl = imagesToUse[currentImgIndex];
+  }, [rental, localFolderFiles, idValue]);
 
   // Robust path resolver
   const getImgSrc = () => {
-    if (!currentImgUrl) return "";
-
-    let src = currentImgUrl;
+    const src = imagesToUse[currentImgIndex];
+    if (!src) return "";
     if (!src.startsWith("/") && !src.startsWith("http")) {
-      src = "/" + src;
+      return "/" + src;
     }
-
-    // Direct extension toggles (avoid discarding completely valid paths)
-    if (fallbackToAlternateExt) {
-      if (src.toLowerCase().endsWith(".jpg")) {
-        src = src.slice(0, -4) + ".png";
-      } else if (src.toLowerCase().endsWith(".png")) {
-        src = src.slice(0, -4) + ".jpg";
-      } else if (src.toLowerCase().endsWith(".jpeg")) {
-        src = src.slice(0, -5) + ".png";
-      }
-    }
-
-    if (isFailedCompletely) {
-      // Direct local fallback (no remote hotlinking)
-      if (src.startsWith("/")) {
-        return src;
-      }
-    }
-
     return src;
-  };
-
-  const handleImageError = () => {
-    if (!fallbackToAlternateExt) {
-      setFallbackToAlternateExt(true);
-    } else if (!isFailedCompletely) {
-      setIsFailedCompletely(true);
-    }
   };
 
   return (
@@ -129,7 +95,6 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
             <img
               src={getImgSrc()}
               alt="preview"
-              onError={handleImageError}
               className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
             />
             {imagesToUse.length > 1 && (
@@ -141,7 +106,7 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
                       prev === 0 ? imagesToUse.length - 1 : prev - 1,
                     );
                   }}
-                  className="absolute left-2 text-white bg-black/50 hover:bg-black/70 p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                  className="absolute left-2 text-white bg-black/50 hover:bg-black/70 p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100 cursor-pointer animate-fade-in"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -152,7 +117,7 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
                       prev === imagesToUse.length - 1 ? 0 : prev + 1,
                     );
                   }}
-                  className="absolute right-2 text-white bg-black/50 hover:bg-black/70 p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                  className="absolute right-2 text-white bg-black/50 hover:bg-black/70 p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100 cursor-pointer animate-fade-in"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>

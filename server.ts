@@ -4,6 +4,47 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { execSync } from "child_process";
 
+function getImageContentType(filePath: string): string {
+  try {
+    const fd = fs.openSync(filePath, "r");
+    const buffer = Buffer.alloc(12);
+    const bytesRead = fs.readSync(fd, buffer, 0, 12, 0);
+    fs.closeSync(fd);
+
+    if (bytesRead >= 12) {
+      // Check for WebP: 'RIFF' (0x52, 0x49, 0x46, 0x46) and 'WEBP' (0x57, 0x45, 0x42, 0x50)
+      const isRiff = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+      const isWebp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+      if (isRiff && isWebp) {
+        return "image/webp";
+      }
+
+      // Check for PNG: 0x89, 0x50, 0x4E, 0x47
+      const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+      if (isPng) {
+        return "image/png";
+      }
+
+      // Check for GIF: 'GIF8' (0x47, 0x49, 0x46, 0x38)
+      const isGif = buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38;
+      if (isGif) {
+        return "image/gif";
+      }
+    }
+
+    if (bytesRead >= 3) {
+      // Check for JPEG: 0xFF, 0xD8, 0xFF
+      const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+      if (isJpeg) {
+        return "image/jpeg";
+      }
+    }
+  } catch (err) {
+    console.error("Error sniffing image content type:", err);
+  }
+  return "";
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -164,6 +205,7 @@ async function startServer() {
           foldersList.push({ 
             name: item, 
             count: files.length,
+            files: files,
             isIdFolder: isMatchedId
           });
         }
@@ -181,32 +223,59 @@ async function startServer() {
       const folderPath = path.join(process.cwd(), "public", "rentals_images", id);
       if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
         const files = fs.readdirSync(folderPath).filter(f => !f.startsWith('.'));
-        return res.json({ exists: true, count: files.length });
+        return res.json({ exists: true, count: files.length, files: files });
       } else {
-        return res.json({ exists: false, count: 0 });
+        return res.json({ exists: false, count: 0, files: [] });
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  // Direct, custom robust file serve endpoint for rentals_images to completely bypass static server router bugs
+  // Direct, custom super-robust, range-supporting serving of images with correct headers to completely bypass Vite & Express sendFile MIME conflicts
   app.get("/rentals_images/:id/:filename", (req, res) => {
     try {
       const { id, filename } = req.params;
       const filePath = path.join(process.cwd(), "public", "rentals_images", id, filename);
       if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
+        const sniffedMime = getImageContentType(filePath);
+        const headers: Record<string, string> = {
+          "Cache-Control": "no-store, no-cache, must-revalidate, private"
+        };
+        if (sniffedMime) {
+          headers["Content-Type"] = sniffedMime;
+        } else {
+          // Fallback content types based on filename
+          const lowerName = filename.toLowerCase();
+          if (lowerName.endsWith(".png")) {
+            headers["Content-Type"] = "image/png";
+          } else if (lowerName.endsWith(".gif")) {
+            headers["Content-Type"] = "image/gif";
+          } else if (lowerName.endsWith(".webp")) {
+            headers["Content-Type"] = "image/webp";
+          } else {
+            headers["Content-Type"] = "image/jpeg";
+          }
+        }
+        
+        res.sendFile(filePath, { headers }, (err) => {
+          if (err) {
+            console.error("sendFile error serving rental image:", err);
+            if (!res.headersSent) {
+              res.status(500).send("Error serving image file on server");
+            }
+          }
+        });
       } else {
-        res.status(404).send("Image not found");
+        res.status(404).send("Image not found on disk");
       }
     } catch (err: any) {
-      res.status(500).send(err.message);
+      console.error("Server error in image serving endpoint:", err);
+      if (!res.headersSent) {
+        res.status(500).send(err.message);
+      }
     }
   });
-
-  // Serve the rentals_images directory statically at /rentals_images for reliable image display
-  app.use("/rentals_images", express.static(path.join(process.cwd(), "public", "rentals_images")));
   app.use(express.static(path.join(process.cwd(), "public")));
 
   // Serve with Vite and API fallbacks

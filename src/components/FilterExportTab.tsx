@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Papa from "papaparse";
 import { RentalProperty } from "../types";
+import { getRentalLocalId } from "../utils";
 
 interface FilterExportTabProps {
   rentals: RentalProperty[];
@@ -83,6 +84,51 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
   useEffect(() => {
     refreshImageStatus();
   }, []);
+
+  const forceHealImages = async () => {
+    try {
+      const res = await fetch("/api/rentals-images-status");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.folders)) {
+          let healedCount = 0;
+          const healed = rentals.map((rental) => {
+            const idValue = getRentalLocalId(rental);
+            const folderMatch = data.folders.find(
+              (f: any) => String(f.name).toLowerCase().trim() === String(idValue).toLowerCase().trim()
+            );
+
+            if (folderMatch && folderMatch.count > 0) {
+              const actualFiles = folderMatch.files || [];
+              const newLocalImages = actualFiles.length > 0
+                ? actualFiles.map((file: string) => `/rentals_images/${idValue}/${file}`)
+                : Array.from(
+                    { length: folderMatch.count },
+                    (_, i) => `/rentals_images/${idValue}/image_${i + 1}.jpg`
+                  );
+              healedCount++;
+              return {
+                ...rental,
+                images: newLocalImages,
+              };
+            }
+            return rental;
+          });
+
+          setRentals(healed);
+          localStorage.setItem("my_rental_pins", JSON.stringify(healed));
+          alert(`🎉 圖片比對與路徑修復完成！\n- 成功比對並修復 ${healedCount} 個特定租屋物件的本機相片庫路徑。`);
+          refreshImageStatus();
+        } else {
+          alert("無法取得圖片資料夾清單。");
+        }
+      } else {
+        alert("無法連結伺服器圖片通道。");
+      }
+    } catch (e: any) {
+      alert(`修復失敗: ${e.message}`);
+    }
+  };
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -309,8 +355,21 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
     }
   };
 
-  const processCSV = (file: File) => {
+  const processCSV = async (file: File) => {
     setError(null);
+    let serverFolders: any[] = [];
+    try {
+      const res = await fetch("/api/rentals-images-status");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.folders)) {
+          serverFolders = data.folders;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to pre-fetch rentals images status during transition", e);
+    }
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -344,7 +403,7 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             const customFields: Record<string, string> = {};
 
             keys.forEach((k) => {
-              const lowerK = k.toLowerCase();
+              const lowerK = k.toLowerCase().trim();
               const val = String(row[k] || "");
 
               if (["id"].includes(lowerK) && val) {
@@ -438,7 +497,8 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
               // Fallback title
               if (!title) title = `Property ${index + 1}`;
-              parsedRentals.push({
+              
+              const tempRental: RentalProperty = {
                 id: id || `rent_${Date.now()}_${index}`,
                 lat,
                 lng,
@@ -449,7 +509,28 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
                 pros,
                 cons,
                 customFields,
-              });
+              };
+
+              // AUTO-HEAL: Immediately resolve best images using server folders & files
+              const idValueForHeal = getRentalLocalId(tempRental);
+              if (idValueForHeal && serverFolders.length > 0) {
+                const folderMatch = serverFolders.find(
+                  (f) => String(f.name).toLowerCase().trim() === String(idValueForHeal).toLowerCase().trim()
+                );
+                if (folderMatch && folderMatch.count > 0) {
+                  const actualFiles = folderMatch.files || [];
+                  if (actualFiles.length > 0) {
+                    tempRental.images = actualFiles.map((file: string) => `/rentals_images/${idValueForHeal}/${file}`);
+                  } else {
+                    tempRental.images = Array.from(
+                      { length: folderMatch.count },
+                      (_, i) => `/rentals_images/${idValueForHeal}/image_${i + 1}.jpg`
+                    );
+                  }
+                }
+              }
+
+              parsedRentals.push(tempRental);
             }
           });
 
@@ -757,6 +838,16 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
             </div>
           </div>
         )}
+
+        {/* 🛠️ 手動比對與自愈修復相片按鈕 🛠️ */}
+        <button
+          type="button"
+          onClick={forceHealImages}
+          className="w-full bg-cyan-950/40 hover:bg-cyan-900/60 active:scale-[0.98] border border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 text-[10px] font-mono font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-cyan-950/30 select-none group"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-180 transition-transform duration-300" />
+          <span>⚡ 診斷比對並自動修復所有相片連結 ⚡</span>
+        </button>
 
         {/* EXISTING COCKPIT DIRECTORIES PANEL */}
         <div className="border-t border-[#1e2330]/60 pt-2 mt-1">
