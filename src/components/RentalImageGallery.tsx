@@ -88,8 +88,8 @@ export const RentalImageGallery: React.FC<RentalImageGalleryProps> = ({
   };
 
   return (
-    <div className="space-y-1.5 relative group">
-      <div className="aspect-video w-full bg-[#1e2330] rounded-lg overflow-hidden border border-white/5 relative flex items-center justify-center">
+    <div className="flex-1 w-full h-full flex flex-col relative group min-h-0">
+      <div className="flex-1 w-full h-full bg-[#1e2330] rounded-lg overflow-hidden border border-white/5 relative flex items-center justify-center min-h-0">
         {imagesToUse.length > 0 ? (
           <>
             <img

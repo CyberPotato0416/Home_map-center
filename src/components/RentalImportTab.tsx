@@ -127,7 +127,8 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
   const pingValue = useMemo(() => {
     if (!selectedRental) return null;
     for (const [key, val] of Object.entries(selectedRental.customFields || {})) {
-      if (key.includes("坪數") || key.includes("坪")) {
+      const lowerKey = key.toLowerCase();
+      if (key.includes("坪數") || key.includes("坪") || lowerKey.includes("size_ping") || lowerKey.includes("ping")) {
         const p = parseFloat(String(val));
         if (!isNaN(p) && p > 0) return p;
       }

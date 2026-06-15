@@ -251,3 +251,79 @@ html, body, #root {
   z-index: 1001;
 }
 
+/* Floating bubble box animations for Phase 7 detail dashboard */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float-slow {
+  animation: float 7s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float 6s ease-in-out infinite;
+  animation-delay: 0.4s;
+}
+
+.animate-float-fast {
+  animation: float 5s ease-in-out infinite;
+  animation-delay: 0.8s;
+}
+
+/* Custom resizable container styling with cyberpunk cyan grip */
+.resizable-box {
+  resize: both;
+  overflow: auto;
+  min-height: 150px;
+}
+
+.resizable-box::-webkit-resizer {
+  background-image: linear-gradient(135deg, transparent 50%, #00f0ff 50%);
+  background-size: 10px 10px;
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  width: 14px;
+  height: 14px;
+  cursor: se-resize;
+}
+
+/* 16:9 Aspect ratio locked resizable container for Photos */
+.resizable-photo-box {
+  resize: horizontal;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  min-width: 320px;
+  max-width: 100%;
+}
+
+.resizable-photo-box::-webkit-resizer {
+  background-image: linear-gradient(135deg, transparent 50%, #00f0ff 50%);
+  background-size: 10px 10px;
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  width: 14px;
+  height: 14px;
+  cursor: e-resize;
+}
+
+/* Horizontal-only resizable box that adjusts height dynamically to content */
+.resizable-horizontal-box {
+  resize: horizontal;
+  overflow: hidden;
+  min-width: 320px;
+  max-width: 100%;
+  height: auto !important;
+}
+
+.resizable-horizontal-box::-webkit-resizer {
+  background-image: linear-gradient(135deg, transparent 50%, #00f0ff 50%);
+  background-size: 10px 10px;
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  width: 14px;
+  height: 14px;
+  cursor: e-resize;
+}
+

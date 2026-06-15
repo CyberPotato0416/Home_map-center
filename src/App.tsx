@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import rawGeoJson from "./taipei_new_taipei_districts.json";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { PanelRightClose, PanelRightOpen, LayoutDashboard, Map } from "lucide-react";
 
 import { MrtStation, RentalProperty, TargetCenter } from "./types";
 import {
@@ -25,6 +25,7 @@ import { FloatingHUD } from "./components/FloatingHUD";
 import { LegendHUD } from "./components/LegendHUD";
 import { StatusHUD } from "./components/StatusHUD";
 import { Sidebar } from "./components/Sidebar";
+import { RentalDetailDashboard } from "./components/RentalDetailDashboard";
 
 // Helper to extract 591 ID or folder ID from a property utilizing the shared helper
 function getRentalLocalId(rental: any): string {
@@ -43,6 +44,7 @@ export default function App() {
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true); // Collapsible sidebar state
   const [isInfoCardOpen, setIsInfoCardOpen] = useState<boolean>(false); // Collapsible Floating HUD card state
+  const [viewMode, setViewMode] = useState<"map" | "dashboard">("map");
 
   const [targetCenter, setTargetCenter] = useState<TargetCenter>(() => {
     const saved = localStorage.getItem("target_center");
@@ -408,6 +410,14 @@ export default function App() {
         map.panTo([rental.lat, rental.lng]);
       });
 
+      marker.on("dblclick", (e) => {
+        L.DomEvent.stopPropagation(e);
+        setSelectedRental(rental);
+        setSelectedStation(null);
+        setSelectedDistrict(null);
+        setViewMode("dashboard");
+      });
+
       marker.addTo(group);
 
       // Auto-open popup if selected
@@ -516,55 +526,100 @@ export default function App() {
       <div
         id="map-container"
         className={`h-[60vh] md:h-full relative overflow-hidden transition-all duration-300 ease-in-out order-1 md:order-1 border-r border-[#1e2330] ${!showMrtLabels ? "hide-mrt-labels" : ""} ${
-          isSidebarOpen ? "w-full flex-1" : "w-full md:w-full flex-1"
+          (isSidebarOpen && viewMode === "map") ? "w-full flex-1" : "w-full md:w-full flex-1"
         }`}
       >
-        {/* Dynamic map canvas */}
-        <div ref={mapContainerRef} className="w-full h-full" id="map" />
+        {/* Dynamic map canvas (kept in DOM when in dashboard mode to preserve Leaflet map state) */}
+        <div 
+          ref={mapContainerRef} 
+          className={`w-full h-full ${viewMode === "map" ? "" : "hidden"}`} 
+          id="map" 
+        />
 
-        {/* Floating Collapsible Control Panel Button (id="btn-toggle-sidebar") */}
+        {/* Full screen Detail Dashboard view */}
+        {viewMode === "dashboard" && (
+          <div className="w-full h-full absolute inset-0 bg-[#070913] z-[990]">
+            <RentalDetailDashboard
+              rental={selectedRental}
+              targetCenter={targetCenter}
+              onClose={() => setViewMode("map")}
+            />
+          </div>
+        )}
+
+        {/* View Mode Toggle Button (id="btn-toggle-viewmode") */}
         <button
-          id="btn-toggle-sidebar"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute top-4 right-4 z-[999] p-2.5 rounded-full bg-gradient-to-r from-cyan-950/90 to-blue-950/90 border border-cyan-400/30 hover:border-cyan-400 text-cyan-400 hover:text-white transition-all cursor-pointer shadow-lg backdrop-blur-md active:scale-95 flex items-center justify-center animate-fade-in"
-          title={isSidebarOpen ? "收合側邊欄" : "展開側邊欄"}
+          id="btn-toggle-viewmode"
+          onClick={() => setViewMode(viewMode === "map" ? "dashboard" : "map")}
+          className={`absolute top-4 z-[999] p-2.5 rounded-full bg-gradient-to-r from-cyan-950/90 to-blue-950/90 border border-cyan-400/30 hover:border-cyan-400 text-cyan-400 hover:text-white transition-all cursor-pointer shadow-lg backdrop-blur-md active:scale-95 flex items-center justify-center gap-1.5 px-4 animate-fade-in text-xs font-bold ${
+            viewMode === "map" ? "right-16" : "right-4"
+          }`}
+          title={viewMode === "map" ? "切換至全版物件詳情" : "切換至地圖模式"}
         >
-          {isSidebarOpen ? (
-            <PanelRightClose className="w-5 h-5" />
+          {viewMode === "map" ? (
+            <>
+              <LayoutDashboard className="w-4 h-4" />
+              <span>全版詳情看板</span>
+            </>
           ) : (
-            <PanelRightOpen className="w-5 h-5 animate-pulse" />
+            <>
+              <Map className="w-4 h-4" />
+              <span>返回地圖模式</span>
+            </>
           )}
         </button>
 
+        {/* Floating Collapsible Control Panel Button (id="btn-toggle-sidebar") */}
+        {viewMode === "map" && (
+          <button
+            id="btn-toggle-sidebar"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-4 right-4 z-[999] p-2.5 rounded-full bg-gradient-to-r from-cyan-950/90 to-blue-950/90 border border-cyan-400/30 hover:border-cyan-400 text-cyan-400 hover:text-white transition-all cursor-pointer shadow-lg backdrop-blur-md active:scale-95 flex items-center justify-center animate-fade-in"
+            title={isSidebarOpen ? "收合側邊欄" : "展開側邊欄"}
+          >
+            {isSidebarOpen ? (
+              <PanelRightClose className="w-5 h-5" />
+            ) : (
+              <PanelRightOpen className="w-5 h-5 animate-pulse" />
+            )}
+          </button>
+        )}
+
         {/* Floating Collapsible Quick Stats HUD */}
-        <FloatingHUD
-          targetCenter={targetCenter}
-          radius={radius}
-          isInfoCardOpen={isInfoCardOpen}
-          setIsInfoCardOpen={setIsInfoCardOpen}
-        />
+        {viewMode === "map" && (
+          <FloatingHUD
+            targetCenter={targetCenter}
+            radius={radius}
+            isInfoCardOpen={isInfoCardOpen}
+            setIsInfoCardOpen={setIsInfoCardOpen}
+          />
+        )}
 
         {/* Translucent GIS Heatmap Legend Overlay Layer */}
-        <LegendHUD showHeatmap={showHeatmap} />
+        {viewMode === "map" && <LegendHUD showHeatmap={showHeatmap} />}
 
         {/* Map Position Status HUD overlay at center-bottom */}
-        <StatusHUD
-          lat={mapCenterPos.lat}
-          lng={mapCenterPos.lng}
-          zoom={zoomLevel}
-        />
+        {viewMode === "map" && (
+          <StatusHUD
+            lat={mapCenterPos.lat}
+            lng={mapCenterPos.lng}
+            zoom={zoomLevel}
+          />
+        )}
 
         {/* Dynamic Watermark Accent */}
-        <div className="absolute top-4 right-16 z-[990] pointer-events-none hidden md:block select-none">
+        <div className={`absolute top-4 z-[990] pointer-events-none hidden md:block select-none animate-fade-in ${
+          viewMode === "map" ? "right-52" : "right-36"
+        }`}>
           <div className="bg-gradient-to-r from-purple-500/10 to-emerald-500/10 backdrop-blur-md border border-purple-500/20 px-3 py-1.5 rounded-full text-[10px] text-purple-400 font-mono font-semibold tracking-wider uppercase">
-            Phase 6: Export & Filter Active
+            {viewMode === "map" ? "Phase 6: Export & Filter Active" : "Detail Dashboard Mode"}
           </div>
         </div>
       </div>
 
       {/* RIGHT: Sidebar Dashboard Panel with smooth translation and scale toggle transitions */}
       <Sidebar
-        isSidebarOpen={isSidebarOpen}
+        isSidebarOpen={isSidebarOpen && viewMode === "map"}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         targetCenter={targetCenter}

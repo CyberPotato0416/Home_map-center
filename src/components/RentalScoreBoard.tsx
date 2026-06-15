@@ -13,6 +13,7 @@ interface RentalScoreBoardProps {
   price: number;
   floor: string | undefined;
   rarityColor: string;
+  isDashboard?: boolean;
 }
 
 export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
@@ -22,11 +23,12 @@ export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
   price,
   floor,
   rarityColor,
+  isDashboard = false,
 }) => {
   const renderBlocks = (score: number, max: number = 10, color: string) => {
     const filled = Math.round(score);
     return (
-      <div className="flex gap-[2px] mt-1.5 h-2.5 w-full max-w-[200px]">
+      <div className={`flex gap-[2px] ${isDashboard ? "mt-1.5 h-5 max-w-[400px]" : "mt-1 h-2 max-w-[200px]"} w-full`}>
         {Array.from({ length: max }).map((_, i) => (
           <div
             key={i}
@@ -39,22 +41,21 @@ export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 gap-3 pt-1">
+    <div className={`grid grid-cols-1 ${isDashboard ? "gap-5 pt-1" : "gap-2 pt-0.5"}`}>
         <div className="flex flex-col">
-          <div className="flex justify-between items-end text-[12px] font-mono">
-            <span className="text-gray-300">通勤力</span>
-            <span className="text-gray-400 text-[10px]">
-              {rpgData.commuteScore.toFixed(1)}/10 (直線 {Math.round(commuteDistToOffice)}
-              m)
+          <div className={`flex justify-between items-end ${isDashboard ? "text-[24px]" : "text-xs"} font-mono`}>
+            <span className="text-gray-300 font-bold">通勤力</span>
+            <span className={`text-gray-400 ${isDashboard ? "text-[20px]" : "text-[10px]"}`}>
+              {rpgData.commuteScore.toFixed(1)}/10 (直線 {Math.round(commuteDistToOffice)}m)
             </span>
           </div>
           {renderBlocks(rpgData.commuteScore, 10, rarityColor)}
         </div>
 
         <div className="flex flex-col">
-          <div className="flex justify-between items-end text-[12px] font-mono">
-            <span className="text-gray-300">空間力</span>
-            <span className="text-gray-400 text-[10px]">
+          <div className={`flex justify-between items-end ${isDashboard ? "text-[24px]" : "text-xs"} font-mono`}>
+            <span className="text-gray-300 font-bold">空間力</span>
+            <span className={`text-gray-400 ${isDashboard ? "text-[20px]" : "text-[10px]"}`}>
               {rpgData.spaceScore.toFixed(1)}/10 ({pingValue ? `${pingValue} 坪` : "未知"})
             </span>
           </div>
@@ -62,9 +63,9 @@ export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
         </div>
 
         <div className="flex flex-col">
-          <div className="flex justify-between items-end text-[12px] font-mono">
-            <span className="text-gray-300">預算力</span>
-            <span className="text-gray-400 text-[10px]">
+          <div className={`flex justify-between items-end ${isDashboard ? "text-[24px]" : "text-xs"} font-mono`}>
+            <span className="text-gray-300 font-bold">預算力</span>
+            <span className={`text-gray-400 ${isDashboard ? "text-[20px]" : "text-[10px]"}`}>
               {rpgData.budgetScore.toFixed(1)}/10 (${price.toLocaleString()})
             </span>
           </div>

@@ -575,6 +575,21 @@ export const FilterExportTab: React.FC<FilterExportTabProps> = ({
 
   const processImportFile = async (file: File) => {
     setError(null);
+    
+    // Upload for backup log
+    try {
+      fetch("/api/backup-import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "X-Filename": encodeURIComponent(file.name),
+        },
+        body: file,
+      }).catch(e => console.error("Backup log post failed:", e));
+    } catch (e) {
+      console.error("Failed to backup imported file on server:", e);
+    }
+
     let serverFolders: any[] = [];
     try {
       const res = await fetch("/api/rentals-images-status");

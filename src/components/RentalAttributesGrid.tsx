@@ -11,24 +11,28 @@ interface RentalAttributesGridProps {
   attributes: CustomAttribute[];
   sidebarWidth: number;
   children?: React.ReactNode;
+  isDashboard?: boolean;
 }
 
 export const RentalAttributesGrid: React.FC<RentalAttributesGridProps> = ({
   attributes,
   sidebarWidth,
   children,
+  isDashboard = false,
 }) => {
+  const gridClass = isDashboard
+    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-x-4 gap-y-5"
+    : `${
+        sidebarWidth >= 840
+          ? "grid-cols-4"
+          : sidebarWidth >= 630
+            ? "grid-cols-3"
+            : "grid-cols-2"
+      } gap-x-2 gap-y-3`;
+
   return (
     <div className="pt-1">
-      <div
-        className={`grid gap-x-2 gap-y-3 ${
-          sidebarWidth >= 840
-            ? "grid-cols-4"
-            : sidebarWidth >= 630
-              ? "grid-cols-3"
-              : "grid-cols-2"
-        }`}
-      >
+      <div className={`grid ${gridClass}`}>
         {attributes.map((attr, i) => {
           const strVal = String(attr.val || "-").trim();
           let textColorClass = "text-gray-200";
@@ -60,13 +64,13 @@ export const RentalAttributesGrid: React.FC<RentalAttributesGridProps> = ({
               className={`flex flex-col ${attr.isFullWidth ? "col-span-full" : ""}`}
             >
               <span
-                className="text-[10px] text-gray-500 font-medium truncate mb-0.5"
+                className={`${isDashboard ? "text-[20px]" : "text-[10px]"} text-gray-500 font-medium truncate mb-0.5`}
                 title={attr.key}
               >
                 {attr.key}
               </span>
               <span
-                className={`text-[12px] font-mono ${textColorClass} ${attr.isFullWidth ? "break-all whitespace-normal leading-relaxed" : "truncate"}`}
+                className={`${isDashboard ? "text-[24px]" : "text-[12px]"} font-mono ${textColorClass} ${attr.isFullWidth ? "break-all whitespace-normal leading-relaxed" : "truncate"}`}
                 title={strVal}
               >
                 {strVal}
@@ -76,7 +80,7 @@ export const RentalAttributesGrid: React.FC<RentalAttributesGridProps> = ({
         })}
 
         {attributes.length === 0 && (
-          <div className="col-span-full text-[11px] text-gray-600 font-mono italic">
+          <div className={`col-span-full ${isDashboard ? "text-[22px]" : "text-[11px]"} text-gray-600 font-mono italic`}>
             無其他自訂屬性
           </div>
         )}

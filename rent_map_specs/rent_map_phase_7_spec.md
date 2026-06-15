@@ -76,8 +76,8 @@
   - 公式：$\text{Score} = \min(10, \frac{\text{size\_ping}}{1.5})$
   - 說明：每 1.5 坪為 1 格，15 坪以上為 10 滿格。
 - **預算力 (Budget Efficiency)**:
-  - 公式：$\text{Score} = \max(0, \min(10, \frac{20000 - \text{price}}{1000}))$
-  - 說明：租金越便宜預算力越高。超過 2 萬元為 0 格，1 萬元以下為 10 滿格。
+  - 公式：$\text{Score} = \max(0, \min(10, \frac{18000 - \text{price}}{600}))$
+  - 說明：租金越便宜預算力越高。超過 1.8 萬元為 0 格，1.2 萬元以下為 10 滿格。
 - **便利力 (Convenience/Accessibility)**:
   - 判定規則：
     - 若有電梯，一律為 10 格 (10/10)。

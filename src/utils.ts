@@ -240,8 +240,8 @@ export function calculateHomeScore(
   score += 2 * spaceScore;
 
   // 3. Budget
-  // Formula: Score = max(0, min(10, (18000 - price) / 800)) (Split 10 blocks from 10k to 18k)
-  const budgetScore = Math.max(0, Math.min(10, (18000 - rental.price) / 800));
+  // Formula: Score = max(0, min(10, (18000 - price) / 600)) (Split 10 blocks from 12k to 18k)
+  const budgetScore = Math.max(0, Math.min(10, (18000 - rental.price) / 600));
   score += 2 * budgetScore;
 
   // 4. Convenience/Floor adjustments (Buffs / Debuffs only, no base convenience score)

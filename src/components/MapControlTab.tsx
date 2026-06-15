@@ -47,9 +47,9 @@ export const MapControlTab: React.FC<MapControlTabProps> = ({
     },
     {
       name: "陳冠宇建築師事務所",
-      address: "台北市大安區仁愛路3段29號5樓",
-      lat: 25.0385,
-      lng: 121.5365
+      address: "106臺北市大安區和安里仁愛路三段118巷12弄10號",
+      lat: 25.0398,
+      lng: 121.5435
     }
   ], []);
 

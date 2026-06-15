@@ -22,7 +22,7 @@
 `rent_map_specs/` 目錄下的所有 `.md` 規格書是產品設計文件，**任何時候都不得刪除**。
 
 ### 3. 不得修改 Python 爬蟲工具
-`extract_591_to_csv.py` 是獨立的地端工具，**除非使用者明確指示，否則不得修改其內容或路徑配置**。
+`extract_591_to_csv.py` 是獨立的地端工具，**除非使用者明確指示，或是偵測到資料庫的欄位有因為巨集或是新需求更新，否則不得修改其內容或路徑配置**。
 
 ---
 
@@ -32,11 +32,14 @@
 所有的網頁 UI 開發工作應集中在 `src/` 目錄下進行：
 - `src/components/` — React 元件
 - `src/hooks/` — 自訂 Hook
-- `src/utils.ts` — 工具函式與評分邏輯
+- `src/utils.ts` — 工具函式與評分邏輯 (計分比重由此控制)
 - `src/utils/` — 各類輔助函式
 
-### 2. 遵循現有的 Phase 規格書
-開發前必須先讀取對應 Phase 的規格書（位於 `rent_map_specs/`），並以規格書的設計方向為準。
+### 2. 遵循現有的 Phase 規格書與核心工作流
+* 開發前必須先讀取對應 Phase 的規格書（位於 `rent_map_specs/`），並以規格書的設計方向為準。
+* 遵守本專案的核心工作流：**`爬物件` ➔ `清洗成 XLSM` ➔ `同步資料與問題集` ➔ `網頁積分評比`**。詳細說明請見根目錄的 [INDEX.MD](file:///H:/645_Home_map-center/INDEX.MD)。
+* 變更 Excel 設計時，必須同步更新 [RentalsManager.bas](file:///H:/645_Home_map-center/RentalsManager.bas) 中的巨集架構，以利後續自動化維護。
+* 任何對 Excel 資料源的更新，皆需執行 `python scratch/generate_questions.py` 以將異動同步至網頁 CSV 及更新待確認問題集。
 
 ### 3. 提交前確認不誤刪重要檔案
 每次 commit 前請執行 `git status` 確認變更清單，若有「deleted」的檔案，**必須核實是否為允許刪除的暫存/測試檔**。

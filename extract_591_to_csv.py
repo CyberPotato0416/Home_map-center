@@ -327,6 +327,7 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
     # 讀取既有 Excel 中的所有物件
     existing_rows = []
     id_to_row = {}
+    existing_header = []
     if file_exists:
         try:
             wb = openpyxl.load_workbook(csv_path, read_only=True, keep_vba=True)
@@ -334,7 +335,8 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
             header = None
             for row in sheet.iter_rows(values_only=True):
                 if not header:
-                    header = [str(cell) for cell in row]
+                    header = [str(cell) for cell in row if cell is not None]
+                    existing_header = list(header)
                     continue
                 row_dict = {}
                 for idx, cell_val in enumerate(row):
@@ -442,6 +444,13 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
     log_func(f"\n💾 正在寫入 Excel 活頁簿: {csv_path} ...")
     try:
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        
+        # 動態合併 fieldnames 與 existing_header，保留自定義欄位 (如 AN 到 AQ 等)
+        actual_fields = list(fieldnames)
+        for h in existing_header:
+            if h and h not in actual_fields:
+                actual_fields.append(h)
+                
         if os.path.exists(csv_path):
             wb = openpyxl.load_workbook(csv_path, keep_vba=True)
             sheet = wb.worksheets[0]
@@ -452,11 +461,11 @@ def process_urls(urls, csv_path, log_func=print, finish_callback=None, update_mo
             sheet.title = "Sheet1"
             
         # 寫入標頭
-        sheet.append(fieldnames)
+        sheet.append(actual_fields)
         
         # 寫入資料
         for row in existing_rows:
-            row_to_write = [row.get(k, "") for k in fieldnames]
+            row_to_write = [row.get(k, "") for k in actual_fields]
             sheet.append(row_to_write)
             
         wb.save(csv_path)

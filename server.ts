@@ -53,6 +53,34 @@ async function startServer() {
   app.use(express.json({ limit: "500mb" }));
   app.use(express.urlencoded({ limit: "500mb", extended: true }));
 
+  // Backup uploaded import files as XLSM logs
+  app.post("/api/backup-import", express.raw({ type: "*/*", limit: "150mb" }), (req, res) => {
+    try {
+      const origFilename = req.headers["x-filename"] as string || "imported_file.csv";
+      const tempPath = path.resolve(process.cwd(), "scratch", `temp_import_${Date.now()}`);
+      
+      // Save temp file
+      fs.writeFileSync(tempPath, req.body);
+      
+      // Spawn python script to convert and log
+      const scriptPath = path.resolve(process.cwd(), "scratch", "backup_to_xlsm.py");
+      try {
+        execSync(`python "${scriptPath}" "${tempPath}" "${origFilename}"`, { stdio: "inherit" });
+      } catch (err: any) {
+        console.error("Backup processing failed:", err);
+      } finally {
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+      }
+      
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Backup endpoint error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Raw file upload endpoint for uploading individual files (like from folder drop)
   app.post("/api/upload-file", express.raw({ type: "*/*", limit: "150mb" }), (req, res) => {
     try {
