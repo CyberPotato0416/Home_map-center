@@ -356,15 +356,15 @@ export function calculateHomeScore(
   }
 
   // Washing Machine — 三級評分 (XLSM AF 欄: 獨立 / 共用 / 無)
-  // 向下相容舊格式：「有」→ 視為「獨立」、「無」→ 視為「無洗衣機」
+  // 只依據 AF 欄位值判定加分，不應由標題或備註中的「獨立洗衣機」關鍵字額外加分
   const washingFieldVal = getField(['洗衣機']);
-  if (washingFieldVal === '獨立' || washingFieldVal === '有' || hasKeyword(['獨洗', '獨立洗衣機'])) {
+  if (washingFieldVal === '獨立') {
     score += 5;
     breakdown.push({ name: '獨立洗衣機', value: '隨房附獨立洗衣機', score: 5, type: 'positive' });
-  } else if (washingFieldVal === '共用' || hasKeyword(['共洗', '共用洗衣機'])) {
+  } else if (washingFieldVal === '共用') {
     // 0 分：中性顯示，讓使用者知道有記錄但不加減分
     breakdown.push({ name: '共用洗衣機', value: '共用，衛生需注意', score: 0, type: 'neutral' });
-  } else if (washingFieldVal === '無' || hasKeyword(['無洗衣機'])) {
+  } else if (washingFieldVal === '無') {
     score -= 10;
     breakdown.push({ name: '無洗衣機', value: '需自行至投幣洗衣', score: -10, type: 'negative' });
   }
