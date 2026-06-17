@@ -15,6 +15,7 @@
 | `public/rentals_import.csv` | 主要租屋物件匯入資料來源，供網頁前端匯入使用 |
 | `public/rentals_images/` | 本地下載的物件照片目錄 |
 | `rent_map_specs/` | 所有 Phase 規格書目錄（.md 檔），**請保留全部** |
+| `scratch/generate_questions.py` | 同步腳本，將 XLSM 資料轉化為 CSV 並更新提問清單，禁止刪除 |
 
 > ⚠️ 若你認為某個檔案不必要，**請提出建議但不要自行刪除**。等待使用者確認後才能動作。
 
@@ -37,9 +38,10 @@
 
 ### 2. 遵循現有的 Phase 規格書與核心工作流
 * 開發前必須先讀取對應 Phase 的規格書（位於 `rent_map_specs/`），並以規格書的設計方向為準。
-* 遵守本專案的核心工作流：**`爬物件` ➔ `清洗成 XLSM` ➔ `同步資料與問題集` ➔ `網頁積分評比`**。詳細說明請見根目錄的 [INDEX.MD](file:///H:/645_Home_map-center/INDEX.MD)。
+* 遵守本專案的核心工作流：**`爬物件` ➡️ `清洗成 XLSM` ➡️ `同步資料與問題集` ➡️ `網頁積分評比`**。詳細說明請見根目錄的 [INDEX.MD](file:///H:/645_Home_map-center/INDEX.MD)。
 * 變更 Excel 設計時，必須同步更新 [RentalsManager.bas](file:///H:/645_Home_map-center/RentalsManager.bas) 中的巨集架構，以利後續自動化維護。
-* 任何對 Excel 資料源的更新，皆需執行 `python scratch/generate_questions.py` 以將異動同步至網頁 CSV 及更新待確認問題集。
+* 任何對 Excel 資料源的更新，必須執行 `python scratch/generate_questions.py` 以將異動同步至網頁 CSV 及更新待確認問題集。
+* **公司中心點**：堯金科技 `[25.0395, 121.5435]`（仁愛路三段大安區，2026/07 裝修完畢遷入）。評分中心點坐標定義在 `src/constants.ts` 的 `COMPANY_COORDS`。
 
 ### 3. 提交前確認不誤刪重要檔案
 每次 commit 前請執行 `git status` 確認變更清單，若有「deleted」的檔案，**必須核實是否為允許刪除的暫存/測試檔**。
@@ -51,6 +53,8 @@
 ```
 645_Home_map-center/
 ├── extract_591_to_csv.py   ← 🔒 地端工具，禁止刪除
+├── scratch/
+│   └── generate_questions.py ← 🔒 同步腳本，禁止刪除
 ├── public/
 │   ├── rentals_import.csv  ← 🔒 物件資料，禁止刪除
 │   └── rentals_images/     ← 🔒 本地照片，禁止刪除
@@ -60,7 +64,8 @@
 │   └── ...
 └── src/                    ← ✅ 前端實作區域
     ├── App.tsx
+    ├── constants.ts     ← 公司座標 COMPANY_COORDS 定義於此
     ├── components/
     ├── hooks/
-    └── utils.ts
+    └── utils.ts             ← 評分公式 calculateHomeScore 定義於此
 ```
