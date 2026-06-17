@@ -465,6 +465,13 @@ export const RentalImportTab: React.FC<RentalImportTabProps> = ({
                     price={selectedRental.price}
                     floor={selectedRental.floor}
                     rarityColor={rarityColor}
+                    subsidyAmount={
+                      rpgData.breakdown.some(
+                        (b) => b.type === "neutral" && b.name === "可申請租屋補助"
+                      )
+                        ? 3000
+                        : undefined
+                    }
                   />
                 </div>
               )}

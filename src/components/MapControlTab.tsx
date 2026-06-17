@@ -40,15 +40,15 @@ export const MapControlTab: React.FC<MapControlTabProps> = ({
 
   const PRESET_CENTERS: TargetCenter[] = React.useMemo(() => [
     {
-      name: "築本科技股份有限公司",
-      address: "台北市民權東路三段 · 近捷運中山國中站",
-      lat: 25.0617,
+      name: "堯金科技股份有限公司",
+      address: "106臺北市大安區仁愛路三段118巷12弄10號（2026/07 裝修完畢遷入）",
+      lat: 25.0395,
       lng: 121.5435
     },
     {
-      name: "陳冠宇建築師事務所",
-      address: "106臺北市大安區和安里仁愛路三段118巷12弄10號",
-      lat: 25.0398,
+      name: "舊辦公居（不再使用）",
+      address: "台北市民權東路三段 · 近捷運中山國中站",
+      lat: 25.0617,
       lng: 121.5435
     }
   ], []);
@@ -64,7 +64,7 @@ export const MapControlTab: React.FC<MapControlTabProps> = ({
   const saveTargetCenter = () => {
     setTargetCenter({
       ...centerForm,
-      lat: Number(centerForm.lat) || 25.0617,
+      lat: Number(centerForm.lat) || 25.0395,
       lng: Number(centerForm.lng) || 121.5435
     });
     setIsEditingCenter(false);

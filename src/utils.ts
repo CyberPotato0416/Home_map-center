@@ -240,11 +240,16 @@ export function calculateHomeScore(
   score += 2 * spaceScore;
 
   // 3. Budget
-  // Formula: Score = max(0, min(10, (18000 - price) / 600)) (Split 10 blocks from 12k to 18k)
-  const budgetScore = Math.max(0, Math.min(10, (18000 - rental.price) / 600));
+  // 租屋補助先偵測：台北市補助 $3,000/月，折抵後租金用於計算預算力，顯示金額不變
+  const hasSubsidy = hasKeyword(['租補', '補助', '可申請租補', '租屋補助']);
+  const subsidyAmount = 3000; // 台北市租屋補助毎月定额
+  const effectivePrice = hasSubsidy ? Math.max(0, rental.price - subsidyAmount) : rental.price;
+  // Formula: Score = max(0, min(10, (18000 - effectivePrice) / 600))
+  const budgetScore = Math.max(0, Math.min(10, (18000 - effectivePrice) / 600));
   score += 2 * budgetScore;
 
-  // 4. Convenience/Floor adjustments (Buffs / Debuffs only, no base convenience score)
+  // 4. Convenience/Floor: penalty = convenienceScore - 10 (Phase 7 spec 便利力進度條 L89-L94)
+  // convenienceScore: 電梯=10, 1-2樓=10, 3樓=8, 4樓=7, 5樓=6, 6樓+=2, B1=0
   const hasElevator = hasKeyword(['電梯', 'elevator']);
   const floorVal = getField(['樓層', 'floor']) || String(rental.floor || '');
   let isBasement = floorVal.includes('b') || floorVal.includes('地下');
@@ -259,44 +264,31 @@ export function calculateHomeScore(
       type: 'positive'
     });
   } else {
+    // 根據 Phase 7 spec 便利力進度條表對映樓層
+    let convenienceScore = 10; // default: 1-2樓
     if (isBasement) {
-      score -= 30; // Debuff: 地下室 (-30)
-      breakdown.push({
-        name: '地下室',
-        value: '潮濕避光與通風差',
-        score: -30,
-        type: 'negative'
-      });
+      convenienceScore = 0;
+    } else if (floorNum <= 2) {
+      convenienceScore = 10;
     } else if (floorNum === 3) {
-      score -= 5; // Debuff: 無電梯 3 樓 (-5)
-      breakdown.push({
-        name: '無電梯 3 樓',
-        value: '每日階梯攀爬運動',
-        score: -5,
-        type: 'negative'
-      });
+      convenienceScore = 8;
     } else if (floorNum === 4) {
-      score -= 15; // Debuff: 無電梯 4 樓 (-15)
-      breakdown.push({
-        name: '無電梯 4 樓',
-        value: '膝蓋與體力考驗',
-        score: -15,
-        type: 'negative'
-      });
+      convenienceScore = 7;
     } else if (floorNum === 5) {
-      score -= 5; // Debuff: 無電梯 5 樓 (-5)
+      convenienceScore = 6;
+    } else { // >= 6F
+      convenienceScore = 2;
+    }
+
+    const floorPenalty = convenienceScore - 10; // 0 或負數
+    if (floorPenalty < 0) {
+      score += floorPenalty;
+      const floorLabel = isBasement ? '地下室 (B1)' : `無電梯 ${floorNum} 樓`;
+      const floorDesc = isBasement ? '潮濕避光與通風差' : `便利力 ${convenienceScore}/10`;
       breakdown.push({
-        name: '無電梯 5 樓',
-        value: '大學耐受挑戰',
-        score: -5,
-        type: 'negative'
-      });
-    } else if (floorNum >= 6) {
-      score -= 10; // Debuff: 無電梯 6 樓及以上 (-10)
-      breakdown.push({
-        name: '無電梯 6 樓及以上',
-        value: `無電梯 ${floorNum} 樓`,
-        score: -10,
+        name: floorLabel,
+        value: floorDesc,
+        score: floorPenalty,
         type: 'negative'
       });
     }
@@ -363,16 +355,21 @@ export function calculateHomeScore(
     breakdown.push({ name: '定頻冷氣', value: acInfo, score: acScore, type: 'negative' });
   }
 
-  // Washing Machine
-  const isIndependentWashing = hasKeyword(['獨洗', '獨立洗衣機']);
-  const isSharedWashing = hasKeyword(['共洗', '共用洗衣機', '無洗衣機']);
-  if (isIndependentWashing) {
-    score += 10;
-    breakdown.push({ name: '獨立洗衣機', value: '獨立乾淨衛生', score: 10, type: 'positive' });
-  } else if (isSharedWashing) {
-    score -= 5;
-    breakdown.push({ name: '共用洗衣機/無洗衣機', value: '衛生疑慮或不便', score: -5, type: 'negative' });
+  // Washing Machine — 三級評分 (XLSM AF 欄: 獨立 / 共用 / 無)
+  // 向下相容舊格式：「有」→ 視為「獨立」、「無」→ 視為「無洗衣機」
+  const washingFieldVal = getField(['洗衣機']);
+  if (washingFieldVal === '獨立' || washingFieldVal === '有' || hasKeyword(['獨洗', '獨立洗衣機'])) {
+    score += 5;
+    breakdown.push({ name: '獨立洗衣機', value: '隨房附獨立洗衣機', score: 5, type: 'positive' });
+  } else if (washingFieldVal === '共用' || hasKeyword(['共洗', '共用洗衣機'])) {
+    // 0 分：中性顯示，讓使用者知道有記錄但不加減分
+    breakdown.push({ name: '共用洗衣機', value: '共用，衛生需注意', score: 0, type: 'neutral' });
+  } else if (washingFieldVal === '無' || hasKeyword(['無洗衣機'])) {
+    score -= 10;
+    breakdown.push({ name: '無洗衣機', value: '需自行至投幣洗衣', score: -10, type: 'negative' });
   }
+
+
 
   // Trash
   const hasTrash = hasKeyword(['垃圾代收', '垃圾處理']);
@@ -383,10 +380,16 @@ export function calculateHomeScore(
     breakdown.push({ name: '垃圾代收', value: '免追垃圾車', score: 5, type: 'positive' });
   }
 
-  // Subsidy
-  if (hasKeyword(['租補', '補助', '可申請租補', '租屋補助'])) {
-    score += 10;
-    breakdown.push({ name: '可申請租屋補助', value: '減輕租金負擔', score: 10, type: 'positive' });
+
+  // Subsidy — 不加分，但已將 -$3,000 納入預算力計算（effectivePrice）
+  if (hasSubsidy) {
+    const displayEffective = rental.price - subsidyAmount;
+    breakdown.push({
+      name: '可申請租屋補助',
+      value: `台北市 -$3,000/月 → 預算力以 NT$${displayEffective.toLocaleString()} 計`,
+      score: 0,
+      type: 'neutral'
+    });
   }
 
   // Electric Meter & Pricing
@@ -416,6 +419,7 @@ export function calculateHomeScore(
       breakdown.push({ name: '電費偏高 (5.1 - 6.0 元/度)', value: `${electricPrice} 元/度`, score: -5, type: 'negative' });
     }
   }
+
 
   // Decoration Level (裝潢等級)
   const decorLevel = getNumber(['裝潢等級']);

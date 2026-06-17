@@ -549,7 +549,15 @@ export const RentalDetailDashboard: React.FC<RentalDetailDashboardProps> = ({
                       floor={getVal("floor")}
                       rarityColor={rarityColor}
                       isDashboard={true}
+                      subsidyAmount={
+                        scoreData.rpg.breakdown.some(
+                          (b) => b.type === "neutral" && b.name === "可申請租屋補助"
+                        )
+                          ? 3000
+                          : undefined
+                      }
                     />
+
                     <div className="border-t border-white/5 my-2"></div>
                     <RentalScoreBreakdown breakdown={scoreData.rpg.breakdown} isDashboard={true} />
                   </div>

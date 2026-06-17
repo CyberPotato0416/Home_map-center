@@ -40,7 +40,7 @@ export default function App() {
   const [mapCenterPos, setMapCenterPos] = useState<{
     lat: number;
     lng: number;
-  }>({ lat: 25.0617, lng: 121.5435 }); // Track current center
+  }>({ lat: 25.0395, lng: 121.5435 }); // Track current center
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true); // Collapsible sidebar state
   const [isInfoCardOpen, setIsInfoCardOpen] = useState<boolean>(false); // Collapsible Floating HUD card state
@@ -54,8 +54,8 @@ export default function App() {
       } catch (e) {}
     }
     return {
-      name: "築本科技股份有限公司",
-      address: "台北市民權東路三段 · 近捷運中山國中站",
+      name: "堯金科技股份有限公司",
+      address: "106臺北市大安區仁愛路三段118巷12弄10號（2026/07 裝修完畢遷入）",
       lat: COMPANY_COORDS[0],
       lng: COMPANY_COORDS[1]
     };

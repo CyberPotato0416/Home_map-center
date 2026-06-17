@@ -14,6 +14,7 @@ interface RentalScoreBoardProps {
   floor: string | undefined;
   rarityColor: string;
   isDashboard?: boolean;
+  subsidyAmount?: number; // 若可申請補助，傳入折抵金額（如 3000）
 }
 
 export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
@@ -24,6 +25,7 @@ export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
   floor,
   rarityColor,
   isDashboard = false,
+  subsidyAmount,
 }) => {
   const renderBlocks = (score: number, max: number = 10, color: string) => {
     const filled = Math.round(score);
@@ -66,7 +68,11 @@ export const RentalScoreBoard: React.FC<RentalScoreBoardProps> = ({
           <div className={`flex justify-between items-end ${isDashboard ? "text-[24px]" : "text-xs"} font-mono`}>
             <span className="text-gray-300 font-bold">預算力</span>
             <span className={`text-gray-400 ${isDashboard ? "text-[20px]" : "text-[10px]"}`}>
-              {rpgData.budgetScore.toFixed(1)}/10 (${price.toLocaleString()})
+              {rpgData.budgetScore.toFixed(1)}/10 (
+                {subsidyAmount && subsidyAmount > 0
+                  ? `$${price.toLocaleString()} → $${(price - subsidyAmount).toLocaleString()} 含補助`
+                  : `$${price.toLocaleString()}`}
+              )
             </span>
           </div>
           {renderBlocks(rpgData.budgetScore, 10, rarityColor)}

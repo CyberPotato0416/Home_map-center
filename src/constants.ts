@@ -1,6 +1,7 @@
 import { RentData, MrtStation } from './types';
 
-export const COMPANY_COORDS: [number, number] = [25.0617, 121.5435];
+// 堯金科技 (2026/07 裝修完畢遷入) - 106臺北市大安區仁愛路三段118巷12弄10號
+export const COMPANY_COORDS: [number, number] = [25.0395, 121.5435];
 export const DEFAULT_CENTER_RENT_BASE = 15000;
 
 // Static district rent metrics as designated in specifications
